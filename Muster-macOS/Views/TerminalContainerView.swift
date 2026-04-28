@@ -8,43 +8,39 @@ struct TerminalContainerView: View {
     @State private var isCheckingPR = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "terminal")
-                    .foregroundStyle(.secondary)
+        TerminalView(workingDirectory: checkout.path)
+            .id(checkout.path)
+            .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "terminal")
+                            .foregroundStyle(.secondary)
 
-                BreadcrumbSegment(text: "Muster", isLeaf: false)
-                BreadcrumbSeparator()
-                BreadcrumbSegment(text: checkout.repository?.displayName ?? "—", isLeaf: false)
-                BreadcrumbSeparator()
-                BreadcrumbSegment(text: checkout.name, isLeaf: true)
+                        BreadcrumbSegment(text: "Muster", isLeaf: false)
+                        BreadcrumbSeparator()
+                        BreadcrumbSegment(text: checkout.repository?.displayName ?? "—", isLeaf: false)
+                        BreadcrumbSeparator()
+                        BreadcrumbSegment(text: checkout.name, isLeaf: true)
 
-                Text(checkout.branch)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule().fill(Color.secondary.opacity(0.15))
-                    )
-                    .padding(.leading, 4)
+                        Text(checkout.branch)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule().fill(Color.secondary.opacity(0.15))
+                            )
+                            .padding(.leading, 4)
+                    }
+                }
 
-                Spacer()
-
-                PRButton(checkout: checkout, prInfo: prInfo, isLoading: isCheckingPR)
+                ToolbarItem(placement: .primaryAction) {
+                    PRButton(checkout: checkout, prInfo: prInfo, isLoading: isCheckingPR)
+                }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(.bar)
-
-            Divider()
-
-            TerminalView(workingDirectory: checkout.path)
-                .id(checkout.path)
-        }
-        .task {
-            await checkForPR()
-        }
+            .task {
+                await checkForPR()
+            }
     }
 
     private func checkForPR() async {
