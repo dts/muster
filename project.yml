@@ -1,0 +1,50 @@
+name: Muster
+options:
+  bundleIdPrefix: com.muster
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15.3"
+
+packages:
+  MusterCore:
+    path: .
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm.git
+    from: "1.2.0"
+
+targets:
+  Muster:
+    type: application
+    platform: macOS
+    sources:
+      - Muster-macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.muster.app
+        PRODUCT_NAME: Muster
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: 1
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_CFBundleDisplayName: Muster
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        SWIFT_VERSION: "5.10"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+    dependencies:
+      - package: MusterCore
+      - package: SwiftTerm
+    entitlements:
+      path: Muster-macOS/Muster.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.files.user-selected.read-write: true
+
+  MusterCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/MusterCoreTests
+    dependencies:
+      - package: MusterCore
