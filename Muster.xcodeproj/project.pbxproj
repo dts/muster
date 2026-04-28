@@ -11,12 +11,16 @@
 		21D4719E020AF473A7A1E3A1 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 19B880ED17F5581E213791C4 /* SwiftTerm */; };
 		31255D58923DD4B0894DF6B4 /* MusterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 815A1DDE71C4D72990423C16 /* MusterCore */; };
 		3C1DCBD713E2E36D504F4979 /* MusterCore in Frameworks */ = {isa = PBXBuildFile; productRef = F1480049C23C91DC6A0932FB /* MusterCore */; };
+		99C11A99C0D728990CCFA430 /* OperationsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90A17EE5A352B3F9289920BC /* OperationsPanel.swift */; };
 		9C802525415B1B0EE5B89F38 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2AD48580499FFA14461771C /* SidebarView.swift */; };
 		A58CECC8DB08EB98911F1075 /* TerminalContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB41038DDB95DE876D14511 /* TerminalContainerView.swift */; };
 		A744140766ACAE8D3931A06D /* NewCheckoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341F3ACE996C2DF82EC2816D /* NewCheckoutView.swift */; };
 		AAE6D7217B2E01510692738D /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 082EDFD7E85D54CDB103DBDA /* TerminalView.swift */; };
 		BDBA7AAF924A915209C3941B /* AddRepositoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83819C1F53090DD052A04A8 /* AddRepositoryView.swift */; };
+		DE64A695EE966FB2EF417B33 /* Operation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9F32447C7BC101F4E91617C /* Operation.swift */; };
+		E2A0B26B906138AE99566424 /* StreamingOutputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C849588E3D9D2B930D66AF27 /* StreamingOutputView.swift */; };
 		E470AE79D163F985A2FEB461 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E704BE60C1CAEA1A8A2086F1 /* ContentView.swift */; };
+		E7E6149154391209C331C4D4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 547120FEB9BD0BACDB8DAED7 /* Assets.xcassets */; };
 		EDE02B1D9964FFDC73A2ADD4 /* RepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D238E76D3E57938D96356825 /* RepositoryTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -25,13 +29,17 @@
 		082EDFD7E85D54CDB103DBDA /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
 		341F3ACE996C2DF82EC2816D /* NewCheckoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewCheckoutView.swift; sourceTree = "<group>"; };
 		42B57827B7DEFB5CA9C019FA /* muster */ = {isa = PBXFileReference; lastKnownFileType = folder; name = muster; path = .; sourceTree = SOURCE_ROOT; };
+		547120FEB9BD0BACDB8DAED7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5802F588980376C6FA9C720A /* MusterCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MusterCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		697AED67A2160E882537B25B /* Muster.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Muster.entitlements; sourceTree = "<group>"; };
+		90A17EE5A352B3F9289920BC /* OperationsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsPanel.swift; sourceTree = "<group>"; };
 		92B603A68BAA4906CECA8A02 /* MusterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusterApp.swift; sourceTree = "<group>"; };
 		B83819C1F53090DD052A04A8 /* AddRepositoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddRepositoryView.swift; sourceTree = "<group>"; };
 		BFB41038DDB95DE876D14511 /* TerminalContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalContainerView.swift; sourceTree = "<group>"; };
+		C849588E3D9D2B930D66AF27 /* StreamingOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingOutputView.swift; sourceTree = "<group>"; };
 		D238E76D3E57938D96356825 /* RepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryTests.swift; sourceTree = "<group>"; };
 		D2AD48580499FFA14461771C /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		D9F32447C7BC101F4E91617C /* Operation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Operation.swift; sourceTree = "<group>"; };
 		E704BE60C1CAEA1A8A2086F1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -59,8 +67,10 @@
 		335465D68A48ACEB4B63C37D /* Muster-macOS */ = {
 			isa = PBXGroup;
 			children = (
+				547120FEB9BD0BACDB8DAED7 /* Assets.xcassets */,
 				697AED67A2160E882537B25B /* Muster.entitlements */,
 				92B603A68BAA4906CECA8A02 /* MusterApp.swift */,
+				9BEB63FCECD824AA4049EDDD /* Operations */,
 				7DC0DD610590F1A2E2B261E6 /* Views */,
 			);
 			path = "Muster-macOS";
@@ -80,11 +90,21 @@
 				B83819C1F53090DD052A04A8 /* AddRepositoryView.swift */,
 				E704BE60C1CAEA1A8A2086F1 /* ContentView.swift */,
 				341F3ACE996C2DF82EC2816D /* NewCheckoutView.swift */,
+				90A17EE5A352B3F9289920BC /* OperationsPanel.swift */,
 				D2AD48580499FFA14461771C /* SidebarView.swift */,
+				C849588E3D9D2B930D66AF27 /* StreamingOutputView.swift */,
 				BFB41038DDB95DE876D14511 /* TerminalContainerView.swift */,
 				082EDFD7E85D54CDB103DBDA /* TerminalView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		9BEB63FCECD824AA4049EDDD /* Operations */ = {
+			isa = PBXGroup;
+			children = (
+				D9F32447C7BC101F4E91617C /* Operation.swift */,
+			);
+			path = Operations;
 			sourceTree = "<group>";
 		};
 		BCE5FC953B33E7809E38CEC4 = {
@@ -123,6 +143,7 @@
 			buildConfigurationList = E197754AC831DDE86C7DB4D8 /* Build configuration list for PBXNativeTarget "Muster" */;
 			buildPhases = (
 				D7D5D6561C362FA6922A2DC7 /* Sources */,
+				D9E3100687ECD7F4C40E5D4A /* Resources */,
 				3A42C92C5C1547322A5101CC /* Frameworks */,
 			);
 			buildRules = (
@@ -195,6 +216,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		D9E3100687ECD7F4C40E5D4A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E7E6149154391209C331C4D4 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		6EABBACA837828A28FDDA451 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -212,7 +244,10 @@
 				E470AE79D163F985A2FEB461 /* ContentView.swift in Sources */,
 				1202D69BB94C12266A87D28B /* MusterApp.swift in Sources */,
 				A744140766ACAE8D3931A06D /* NewCheckoutView.swift in Sources */,
+				DE64A695EE966FB2EF417B33 /* Operation.swift in Sources */,
+				99C11A99C0D728990CCFA430 /* OperationsPanel.swift in Sources */,
 				9C802525415B1B0EE5B89F38 /* SidebarView.swift in Sources */,
+				E2A0B26B906138AE99566424 /* StreamingOutputView.swift in Sources */,
 				A58CECC8DB08EB98911F1075 /* TerminalContainerView.swift in Sources */,
 				AAE6D7217B2E01510692738D /* TerminalView.swift in Sources */,
 			);

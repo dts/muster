@@ -17,6 +17,7 @@ struct MusterApp: App {
         WindowGroup {
             ContentView()
         }
+        .windowStyle(.hiddenTitleBar)
         .modelContainer(container)
         .commands {
             CommandGroup(replacing: .newItem) {

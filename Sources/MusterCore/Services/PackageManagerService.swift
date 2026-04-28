@@ -41,6 +41,40 @@ public actor PackageManagerService {
         }
     }
 
+    public nonisolated func installStreaming(
+        at path: URL,
+        packageManager: PackageManager,
+        offline: Bool
+    ) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                let primary = offline ? packageManager.offlineInstallCommand : packageManager.installCommand
+                let primaryStream = GitService.runStreaming(primary, at: path)
+                do {
+                    for try await line in primaryStream {
+                        continuation.yield(line)
+                    }
+                    continuation.finish()
+                } catch {
+                    if offline {
+                        continuation.yield("[offline install failed — retrying online]")
+                        let fallback = GitService.runStreaming(packageManager.installCommand, at: path)
+                        do {
+                            for try await line in fallback {
+                                continuation.yield(line)
+                            }
+                            continuation.finish()
+                        } catch {
+                            continuation.finish(throwing: error)
+                        }
+                    } else {
+                        continuation.finish(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
     private func run(_ arguments: [String], at workingDirectory: URL) async throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")

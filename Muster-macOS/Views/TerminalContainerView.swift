@@ -9,22 +9,29 @@ struct TerminalContainerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 6) {
                 Image(systemName: "terminal")
-                Text(checkout.name)
-                    .fontWeight(.medium)
-                Text("•")
                     .foregroundStyle(.secondary)
+
+                BreadcrumbSegment(text: "Muster", isLeaf: false)
+                BreadcrumbSeparator()
+                BreadcrumbSegment(text: checkout.repository?.displayName ?? "—", isLeaf: false)
+                BreadcrumbSeparator()
+                BreadcrumbSegment(text: checkout.name, isLeaf: true)
+
                 Text(checkout.branch)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule().fill(Color.secondary.opacity(0.15))
+                    )
+                    .padding(.leading, 4)
 
                 Spacer()
 
                 PRButton(checkout: checkout, prInfo: prInfo, isLoading: isCheckingPR)
-
-                Text(checkout.path)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -33,6 +40,7 @@ struct TerminalContainerView: View {
             Divider()
 
             TerminalView(workingDirectory: checkout.path)
+                .id(checkout.path)
         }
         .task {
             await checkForPR()
@@ -43,6 +51,26 @@ struct TerminalContainerView: View {
         isCheckingPR = true
         prInfo = await PRService.findExistingPR(for: checkout)
         isCheckingPR = false
+    }
+}
+
+private struct BreadcrumbSegment: View {
+    let text: String
+    let isLeaf: Bool
+
+    var body: some View {
+        Text(text)
+            .fontWeight(isLeaf ? .semibold : .regular)
+            .foregroundStyle(isLeaf ? .primary : .secondary)
+            .lineLimit(1)
+    }
+}
+
+private struct BreadcrumbSeparator: View {
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
     }
 }
 
