@@ -14,7 +14,6 @@
 		28AD5ADAD5A255E991D65957 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3602DB9FC7685533F9CA646 /* SessionManager.swift */; };
 		31255D58923DD4B0894DF6B4 /* MusterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 815A1DDE71C4D72990423C16 /* MusterCore */; };
 		3C1DCBD713E2E36D504F4979 /* MusterCore in Frameworks */ = {isa = PBXBuildFile; productRef = F1480049C23C91DC6A0932FB /* MusterCore */; };
-		4067EF892B33054EA44278DF /* AttentionParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B6C763A2F98B040079C53C /* AttentionParser.swift */; };
 		44BEFD48DA0098D6E0917200 /* AttentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB382C6B265112C31DB174C /* AttentionStore.swift */; };
 		7372BA20D81C3A00A72686F5 /* Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9745C47D66F6E864E9A72B7 /* Connection.swift */; };
 		7BC8ABD42A766AC0309CD072 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCB6F80716E8B6B126EB7F4 /* main.swift */; };
@@ -65,7 +64,6 @@
 		071E13536AFE944006C4A377 /* Muster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Muster.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		082EDFD7E85D54CDB103DBDA /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
 		0BC486A9576041D1EE2B772A /* ShellHostIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellHostIntegrationTests.swift; sourceTree = "<group>"; };
-		15B6C763A2F98B040079C53C /* AttentionParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttentionParser.swift; sourceTree = "<group>"; };
 		341F3ACE996C2DF82EC2816D /* NewCheckoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewCheckoutView.swift; sourceTree = "<group>"; };
 		3508FA04786717AA606AAC8B /* MusterShellHost */ = {isa = PBXFileReference; includeInIndex = 0; path = MusterShellHost; sourceTree = BUILT_PRODUCTS_DIR; };
 		547120FEB9BD0BACDB8DAED7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -185,7 +183,6 @@
 		CCE17FB1230E5EDFB42BCA40 /* MusterShellHost */ = {
 			isa = PBXGroup;
 			children = (
-				15B6C763A2F98B040079C53C /* AttentionParser.swift */,
 				D9745C47D66F6E864E9A72B7 /* Connection.swift */,
 				CDCB6F80716E8B6B126EB7F4 /* main.swift */,
 				EA63BE731BD9B29219D63D55 /* PTY.swift */,
@@ -340,7 +337,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4067EF892B33054EA44278DF /* AttentionParser.swift in Sources */,
 				7372BA20D81C3A00A72686F5 /* Connection.swift in Sources */,
 				CA0FDC917B20B459B3AC8AD5 /* PTY.swift in Sources */,
 				15296D9830CBCD86B8BB0258 /* RingBuffer.swift in Sources */,
