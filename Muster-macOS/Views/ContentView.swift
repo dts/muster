@@ -19,40 +19,42 @@ struct ContentView: View {
             )
             .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 360)
         } detail: {
-            VStack(spacing: 0) {
-                if let banner = ingestBanner {
+            switch selection {
+            case .checkout(let checkout):
+                TerminalContainerView(checkout: checkout)
+            case .operation(let op):
+                OperationDetailView(operation: op)
+            case .none:
+                VStack(spacing: 16) {
+                    Image("Sheep")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 240, height: 240)
+                    Text("No Checkout Selected")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                    Text("Select a checkout from the sidebar to open a terminal.")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .toolbar {
+            if let banner = ingestBanner {
+                ToolbarItem(placement: .principal) {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.down.circle")
                         Text(banner).font(.caption)
-                        Spacer()
                         Button {
                             withAnimation { ingestBanner = nil }
                         } label: { Image(systemName: "xmark") }
                         .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.accentColor.opacity(0.12))
-                }
-
-                switch selection {
-                case .checkout(let checkout):
-                    TerminalContainerView(checkout: checkout)
-                case .operation(let op):
-                    OperationDetailView(operation: op)
-                case .none:
-                    VStack(spacing: 16) {
-                        Image("Sheep")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 240, height: 240)
-                        Text("No Checkout Selected")
-                            .font(.title2)
-                            .fontWeight(.medium)
-                        Text("Select a checkout from the sidebar to open a terminal.")
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(Color.accentColor.opacity(0.15))
+                    )
                 }
             }
         }
@@ -76,8 +78,6 @@ struct ContentView: View {
             }
             if !parts.isEmpty {
                 withAnimation { ingestBanner = parts.joined(separator: ", ").capitalizedFirst }
-                try? await Task.sleep(for: .seconds(6))
-                withAnimation { ingestBanner = nil }
             }
         }
     }
