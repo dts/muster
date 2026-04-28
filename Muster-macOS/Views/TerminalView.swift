@@ -73,14 +73,52 @@ final class OSCScanner: @unchecked Sendable {
     }
 
     private func dispatchOSC(_ buf: [UInt8]) {
-        guard let str = String(bytes: buf, encoding: .utf8),
-              let semi = str.firstIndex(of: ";") else { return }
-        let code = String(str[..<semi])
-        let rest = String(str[str.index(after: semi)...])
+        guard let str = String(bytes: buf, encoding: .utf8), !str.isEmpty else { return }
+
+        let code: String
+        let rest: String
+        if let semi = str.firstIndex(of: ";") {
+            code = String(str[..<semi])
+            rest = String(str[str.index(after: semi)...])
+        } else {
+            code = str
+            rest = ""
+        }
 
         switch code {
         case "9":
-            pending.append(.notify(title: nil, body: rest))
+            // OSC 9 variants:
+            // OSC 9;message - simple notification
+            // OSC 9;N;message - subtype notification (0=notify, 3=urgent notify, 4=title)
+            let parts = rest.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)
+            if parts.count >= 2, let subtype = Int(parts[0]) {
+                let message = String(parts[1])
+                switch subtype {
+                case 0, 3: // notification (3 = urgent)
+                    pending.append(.notify(title: nil, body: message))
+                case 4: // window title - SwiftTerm handles this via delegate
+                    break
+                default:
+                    pending.append(.notify(title: nil, body: message))
+                }
+            } else {
+                // Simple OSC 9;message format
+                pending.append(.notify(title: nil, body: rest))
+            }
+        case "99":
+            // OSC 99 notification (foot terminal, others)
+            // Format: OSC 99;d=0:p=body:i=id ST or simply OSC 99;body ST
+            if rest.contains(":p=") {
+                if let range = rest.range(of: ":p=") {
+                    var body = String(rest[range.upperBound...])
+                    if let endRange = body.range(of: ":") {
+                        body = String(body[..<endRange.lowerBound])
+                    }
+                    pending.append(.notify(title: nil, body: body))
+                }
+            } else {
+                pending.append(.notify(title: nil, body: rest))
+            }
         case "777":
             let parts = rest.split(separator: ";", maxSplits: 2, omittingEmptySubsequences: false)
             if parts.count >= 3 && parts[0] == "notify" {
