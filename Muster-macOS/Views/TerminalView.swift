@@ -216,6 +216,7 @@ final class RemoteTerminalView: SwiftTerm.TerminalView, TerminalViewDelegate {
     }
 
     nonisolated func sizeChanged(source: SwiftTerm.TerminalView, newCols: Int, newRows: Int) {
+        guard newCols > 0, newRows > 0, newCols <= Int(UInt16.max), newRows <= Int(UInt16.max) else { return }
         let cols = UInt16(newCols)
         let rows = UInt16(newRows)
         Task { @MainActor [weak self] in
