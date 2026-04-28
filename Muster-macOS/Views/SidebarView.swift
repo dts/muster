@@ -161,6 +161,7 @@ struct SidebarView: View {
         if case .checkout(let sel) = selection, sel == checkout {
             selection = nil
         }
+        TerminalCache.shared.discard(checkoutId: checkout.id)
         try? FileManager.default.removeItem(at: URL(fileURLWithPath: checkout.path))
         modelContext.delete(checkout)
         try? modelContext.save()
@@ -169,6 +170,9 @@ struct SidebarView: View {
     private func delete(repository: Repository) {
         if case .checkout(let sel) = selection, sel.repository?.id == repository.id {
             selection = nil
+        }
+        for checkout in repository.checkouts {
+            TerminalCache.shared.discard(checkoutId: checkout.id)
         }
         try? FileManager.default.removeItem(at: URL(fileURLWithPath: repository.masterPath))
         let checkoutsRoot = PathService.shared.checkoutsDir
@@ -198,6 +202,7 @@ struct RepositoryRow: View {
 
 struct CheckoutRow: View {
     let checkout: Checkout
+    @State private var attention = AttentionStore.shared
 
     var body: some View {
         HStack {
@@ -211,6 +216,12 @@ struct CheckoutRow: View {
             }
 
             Spacer()
+
+            if attention.hasUnread(for: checkout.id) {
+                Circle()
+                    .fill(.orange)
+                    .frame(width: 7, height: 7)
+            }
 
             DepsStateIndicator(state: checkout.depsState)
         }

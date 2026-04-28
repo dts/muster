@@ -36,11 +36,31 @@ targets:
     dependencies:
       - package: MusterCore
       - package: SwiftTerm
+      - target: MusterShellHost
+        copy:
+          destination: executables
     entitlements:
       path: Muster-macOS/Muster.entitlements
       properties:
         com.apple.security.app-sandbox: false
         com.apple.security.files.user-selected.read-write: true
+
+  MusterShellHost:
+    type: tool
+    platform: macOS
+    sources:
+      - Sources/MusterShellHost
+    settings:
+      base:
+        PRODUCT_NAME: MusterShellHost
+        SWIFT_VERSION: "5.10"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        SKIP_INSTALL: NO
+    dependencies:
+      - package: MusterCore
+        product: MusterShellProtocol
 
   MusterCoreTests:
     type: bundle.unit-test

@@ -1,6 +1,10 @@
 # Build artifacts
 .build/
 DerivedData/
+/*.d
+/*.o
+/*.swiftdeps
+/*.swiftdeps~
 
 # Xcode user data (keep project itself)
 *.xcodeproj/xcuserdata/

@@ -39,11 +39,19 @@ struct TerminalContainerView: View {
 
             Divider()
 
-            TerminalView(workingDirectory: checkout.path)
-                .id(checkout.path)
+            TerminalView(checkoutId: checkout.id, workingDirectory: checkout.path)
+                .id(checkout.id)
         }
         .task {
             await checkForPR()
+        }
+        .onAppear {
+            AttentionStore.shared.startIfNeeded()
+            AttentionStore.shared.setFocused(checkout.id)
+        }
+        .onDisappear {
+            // Don't unfocus here — TerminalContainerView is recreated on selection change,
+            // and the new container's onAppear takes care of refocusing.
         }
     }
 
