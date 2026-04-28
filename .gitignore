@@ -1,8 +1,11 @@
 # Build artifacts
 .build/
 DerivedData/
+
+# Xcode user data (keep project itself)
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 
 # Swift Package Manager
 .swiftpm/
