@@ -4,7 +4,6 @@ import MusterShellProtocol
 
 protocol SessionClient: AnyObject {
     var id: ObjectIdentifier { get }
-    var isFocused: Bool { get set }
     func send(frame: Frame)
 }
 
@@ -15,11 +14,9 @@ final class Session {
     let createdAt: Date
 
     private let ringBuffer = RingBuffer()
-    private let parser = AttentionParser()
     private var clients: [ObjectIdentifier: WeakClientRef] = [:]
     private(set) var exitedCode: Int32?
-    private(set) var unreadBells: Int = 0
-    private(set) var currentTitle: String?
+    private var didExit = false
 
     private var readSource: DispatchSourceRead?
     private var procSource: DispatchSourceProcess?
@@ -66,9 +63,7 @@ final class Session {
             if n > 0 {
                 let chunk = Data(bytes: buf, count: n)
                 ringBuffer.append(chunk)
-                parser.feed(chunk)
                 broadcastOutput(chunk)
-                dispatchEvents()
             } else if n == 0 {
                 return
             } else if errno == EAGAIN || errno == EWOULDBLOCK {
@@ -80,8 +75,13 @@ final class Session {
     }
 
     private func handleChildExit() {
+        guard !didExit else { return }
+
         var status: Int32 = 0
-        _ = waitpid(pty.pid, &status, WNOHANG)
+        let r = waitpid(pty.pid, &status, WNOHANG)
+        guard r == pty.pid else { return }
+
+        didExit = true
         let code: Int32
         if (status & 0x7f) == 0 {
             code = (status >> 8) & 0xff
@@ -124,11 +124,6 @@ final class Session {
             let bulk = BulkPayload(sessionId: sessionId, bytes: snapshot)
             client.send(frame: Frame(type: .output, payload: bulk.encode()))
         }
-
-        // Replay current title if known
-        if let title = currentTitle, let p = try? WireCodec.encode(TitleChangedEvent(sessionId: sessionId, title: title)) {
-            client.send(frame: Frame(type: .titleChanged, payload: p))
-        }
     }
 
     func detach(_ client: SessionClient) {
@@ -136,7 +131,7 @@ final class Session {
     }
 
     func write(_ data: Data) {
-        guard !data.isEmpty else { return }
+        guard !data.isEmpty, exitedCode == nil else { return }
         data.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) in
             guard let base = ptr.baseAddress else { return }
             var off = 0
@@ -159,22 +154,12 @@ final class Session {
 
     /// Politely terminates the shell. We try SIGTERM, escalate to SIGKILL after a grace period.
     func kill() {
+        guard exitedCode == nil else { return }
         sendSignal(pid: pty.pid, signal: SIGTERM)
-        let pid = pty.pid
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
-            // If still alive, escalate
-            if Darwin.kill(pid, 0) == 0 {
-                _ = Darwin.kill(pid, SIGKILL)
-            }
+        queue.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self, self.exitedCode == nil else { return }
+            _ = Darwin.kill(self.pty.pid, SIGKILL)
         }
-    }
-
-    func markRead() {
-        unreadBells = 0
-    }
-
-    var info: SessionInfo {
-        SessionInfo(sessionId: sessionId, pid: pty.pid, exitedCode: exitedCode)
     }
 
     // Internal helpers
@@ -196,37 +181,6 @@ final class Session {
         compactClients()
         for ref in clients.values {
             ref.target?.send(frame: frame)
-        }
-    }
-
-    private func dispatchEvents() {
-        let events = parser.drainEvents()
-        guard !events.isEmpty else { return }
-        for ev in events {
-            switch ev {
-            case .bell:
-                unreadBells += 1
-                if let p = try? WireCodec.encode(BellEvent(sessionId: sessionId)) {
-                    broadcast(frame: Frame(type: .bell, payload: p))
-                }
-            case .title(let t):
-                currentTitle = t
-                if let p = try? WireCodec.encode(TitleChangedEvent(sessionId: sessionId, title: t)) {
-                    broadcast(frame: Frame(type: .titleChanged, payload: p))
-                }
-            case .cwd(let path):
-                if let p = try? WireCodec.encode(CwdChangedEvent(sessionId: sessionId, path: path)) {
-                    broadcast(frame: Frame(type: .cwdChanged, payload: p))
-                }
-            case .notify(let title, let body):
-                if let p = try? WireCodec.encode(NotifyEvent(sessionId: sessionId, title: title, body: body)) {
-                    broadcast(frame: Frame(type: .notify, payload: p))
-                }
-            case .promptMark(let kind, let exit):
-                if let p = try? WireCodec.encode(PromptMarkEvent(sessionId: sessionId, kind: kind, exitCode: exit)) {
-                    broadcast(frame: Frame(type: .promptMark, payload: p))
-                }
-            }
         }
     }
 }

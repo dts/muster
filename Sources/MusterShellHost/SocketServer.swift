@@ -96,15 +96,20 @@ final class SocketServer: ServerControl {
                 return
             }
 
-            let conn = Connection(socketFd: cfd, manager: manager, server: self) { [weak self] c in
-                self?.connQueue.async {
-                    self?.connRefs.removeValue(forKey: c.id)
-                    self?.connections.remove(c.id)
+            // P0.8 fix: do entire accept-and-register on connQueue under quitRequested check
+            connQueue.sync { [weak self] in
+                guard let self, !quitRequested else {
+                    Darwin.close(cfd)
+                    return
                 }
-            }
-            connQueue.async { [weak self] in
-                self?.connections.insert(conn.id)
-                self?.connRefs[conn.id] = conn
+                let conn = Connection(socketFd: cfd, manager: manager, server: self) { [weak self] c in
+                    self?.connQueue.async {
+                        self?.connRefs.removeValue(forKey: c.id)
+                        self?.connections.remove(c.id)
+                    }
+                }
+                connections.insert(conn.id)
+                connRefs[conn.id] = conn
             }
         }
     }

@@ -26,7 +26,7 @@ let mode = argv.dropFirst().first(where: { !$0.hasPrefix("--") || $0 == "--serve
 
 switch mode {
 case "--version":
-    print("MusterShellHost \(BuildStamp.helperBuildId), protocol \(BuildStamp.protocolVersion)")
+    print("MusterShellHost protocol \(BuildStamp.protocolVersion)")
     exit(0)
 
 case "--test-pty":
@@ -78,7 +78,7 @@ case "--serve":
     }
 
     let now = ISO8601DateFormatter().string(from: Date())
-    fputs("[\(now)] MusterShellHost starting (build=\(BuildStamp.helperBuildId), protocol=\(BuildStamp.protocolVersion), pid=\(getpid()))\n", stderr)
+    fputs("[\(now)] MusterShellHost starting (protocol=\(BuildStamp.protocolVersion), pid=\(getpid()))\n", stderr)
     fputs("[\(now)] socket=\(socketPath)\n", stderr)
 
     let manager = SessionManager()
@@ -91,26 +91,24 @@ case "--serve":
         exit(1)
     }
 
-    // Signal handlers
+    // P3 fix: ignore signals BEFORE creating sources to avoid race
+    signal(SIGTERM, SIG_IGN)
+    signal(SIGINT, SIG_IGN)
+    signal(SIGUSR1, SIG_IGN)
+    signal(SIGHUP, SIG_IGN)
+    signal(SIGPIPE, SIG_IGN)
+
     let termSrc = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .global())
     termSrc.setEventHandler { server.requestQuit() }
     termSrc.resume()
-    signal(SIGTERM, SIG_IGN)
 
     let intSrc = DispatchSource.makeSignalSource(signal: SIGINT, queue: .global())
     intSrc.setEventHandler { server.requestQuit() }
     intSrc.resume()
-    signal(SIGINT, SIG_IGN)
 
     let usrSrc = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .global())
     usrSrc.setEventHandler { server.requestQuit() }
     usrSrc.resume()
-    signal(SIGUSR1, SIG_IGN)
-
-    // Ignore SIGHUP — we want to survive controlling-terminal hangups
-    signal(SIGHUP, SIG_IGN)
-    // Ignore SIGPIPE — we handle write failures explicitly
-    signal(SIGPIPE, SIG_IGN)
 
     server.run()
 

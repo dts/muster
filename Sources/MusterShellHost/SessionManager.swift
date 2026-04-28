@@ -53,10 +53,4 @@ final class SessionManager {
             }
         }
     }
-
-    func list() -> [SessionInfo] {
-        queue.sync {
-            sessions.values.map { $0.info }
-        }
-    }
 }

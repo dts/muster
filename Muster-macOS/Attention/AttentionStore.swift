@@ -42,7 +42,6 @@ final class AttentionStore {
             let s = ensureState(for: id)
             s.unreadBells = 0
             s.lastNotification = nil
-            Task { await ShellHostClient.shared.markRead(sessionId: id) }
         }
     }
 
@@ -75,33 +74,51 @@ final class AttentionStore {
         if focusedSessionId == checkoutId { focusedSessionId = nil }
     }
 
+    // MARK: - Direct handlers from SwiftTerm delegates and OSCScanner
+
+    func handleBell(checkoutId: UUID) {
+        let st = ensureState(for: checkoutId)
+        let isFocused = (focusedSessionId == checkoutId) && NSApp.isActive
+        if !isFocused {
+            st.unreadBells += 1
+            bounceDockIfBackground()
+        }
+    }
+
+    func handleTitle(checkoutId: UUID, title: String) {
+        ensureState(for: checkoutId).currentTitle = title
+    }
+
+    func handleCwd(checkoutId: UUID, path: String) {
+        ensureState(for: checkoutId).currentCwd = path
+    }
+
+    func handleNotify(checkoutId: UUID, title: String?, body: String) {
+        let st = ensureState(for: checkoutId)
+        st.lastNotification = (title, body, Date())
+        let isFocused = (focusedSessionId == checkoutId) && NSApp.isActive
+        if !isFocused {
+            postSystemNotification(title: title ?? "Muster", body: body)
+            bounceDockIfBackground()
+        }
+    }
+
+    func handlePromptMark(checkoutId: UUID, kind: PromptMarkKind, exitCode: Int32?) {
+        if kind == .commandEnd, let code = exitCode {
+            let st = ensureState(for: checkoutId)
+            st.lastExitCode = code
+            let isFocused = (focusedSessionId == checkoutId) && NSApp.isActive
+            if code != 0 && !isFocused {
+                bounceDockIfBackground()
+            }
+        }
+    }
+
+    // MARK: - Event stream handler (for .exited only now)
+
     private func handle(event: AttentionEvent) {
         let st = ensureState(for: event.sessionId)
-        let isFocused = (focusedSessionId == event.sessionId) && NSApp.isActive
-
         switch event.kind {
-        case .bell:
-            if !isFocused {
-                st.unreadBells += 1
-                bounceDockIfBackground()
-            }
-        case .notify(let title, let body):
-            st.lastNotification = (title, body, event.timestamp)
-            if !isFocused {
-                postSystemNotification(title: title ?? "Muster", body: body)
-                bounceDockIfBackground()
-            }
-        case .titleChanged(let t):
-            st.currentTitle = t
-        case .cwdChanged(let path):
-            st.currentCwd = path
-        case .promptMark(let kind, let exitCode):
-            if kind == .commandEnd, let code = exitCode {
-                st.lastExitCode = code
-                if code != 0 && !isFocused {
-                    bounceDockIfBackground()
-                }
-            }
         case .exited(let code):
             st.lastExitCode = code
         }
@@ -124,8 +141,4 @@ final class AttentionStore {
     private func requestNotificationPermissionIfNeeded() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
-}
-
-private extension ShellSession {
-    var sessionIdString: String { sessionId.uuidString }
 }

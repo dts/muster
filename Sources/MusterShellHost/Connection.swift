@@ -19,7 +19,6 @@ final class Connection: SessionClient {
     private var onClose: ((Connection) -> Void)?
 
     var id: ObjectIdentifier { ObjectIdentifier(self) }
-    var isFocused: Bool = false
 
     init(socketFd: Int32, manager: SessionManager, server: ServerControl, onClose: @escaping (Connection) -> Void) {
         self.socketFd = socketFd
@@ -73,7 +72,6 @@ final class Connection: SessionClient {
         case .hello:
             let ack = HelloAck(
                 protocolVersion: BuildStamp.protocolVersion,
-                buildId: BuildStamp.helperBuildId,
                 pid: getpid(),
                 startedAt: Date()
             )
@@ -100,16 +98,16 @@ final class Connection: SessionClient {
         case .input:
             guard let bulk = BulkPayload.decode(frame.payload) else { return }
             if let session = manager.get(bulk.sessionId) {
-                session.queue.async { [bytes = bulk.bytes] in
-                    session.write(bytes)
+                session.queue.async { [weak session, bytes = bulk.bytes] in
+                    session?.write(bytes)
                 }
             }
 
         case .resize:
             guard let req = try? WireCodec.decode(Resize.self, from: frame.payload) else { return }
             if let session = manager.get(req.sessionId) {
-                session.queue.async {
-                    session.resize(cols: req.cols, rows: req.rows)
+                session.queue.async { [weak session] in
+                    session?.resize(cols: req.cols, rows: req.rows)
                 }
             }
 
@@ -127,29 +125,7 @@ final class Connection: SessionClient {
             guard let req = try? WireCodec.decode(Kill.self, from: frame.payload) else { return }
             manager.kill(req.sessionId)
 
-        case .markRead:
-            guard let req = try? WireCodec.decode(MarkRead.self, from: frame.payload) else { return }
-            if let session = manager.get(req.sessionId) {
-                session.queue.async {
-                    session.markRead()
-                }
-            }
-
-        case .setFocused:
-            guard let req = try? WireCodec.decode(SetFocused.self, from: frame.payload) else { return }
-            isFocused = req.focused
-
-        case .list:
-            let info = manager.list()
-            if let p = try? WireCodec.encode(SessionsList(sessions: info)) {
-                send(frame: Frame(type: .sessionsList, payload: p))
-            }
-
         case .quit:
-            server?.requestQuit()
-
-        case .drain:
-            // For v1 — same as quit (proper drain semantics deferred)
             server?.requestQuit()
 
         default:
@@ -195,9 +171,14 @@ final class Connection: SessionClient {
             }
             attachedSessions.removeAll()
             readSource?.cancel()
-            Darwin.close(socketFd)
-            onClose?(self)
+            // P0.3 fix: close fd from writeQueue so pending writes drain first
+            let fd = socketFd
+            let callback = onClose
             onClose = nil
+            writeQueue.async(flags: .barrier) {
+                Darwin.close(fd)
+                callback?(self)
+            }
         }
     }
 }

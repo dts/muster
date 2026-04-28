@@ -86,7 +86,13 @@ final class ClientConnection: @unchecked Sendable {
         lock.unlock()
 
         readSource?.cancel()
-        Darwin.close(socketFd)
-        onClose?()
+        // P0.3 fix: close fd from writeQueue so pending writes drain first
+        let fd = socketFd
+        let callback = onClose
+        onClose = nil
+        writeQueue.async(flags: .barrier) {
+            Darwin.close(fd)
+            callback?()
+        }
     }
 }

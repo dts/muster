@@ -22,6 +22,7 @@ public struct Frame: Sendable {
 
 public final class FrameReader {
     private var buffer = Data()
+    private var readHead = 0
 
     public init() {}
 
@@ -30,24 +31,41 @@ public final class FrameReader {
     }
 
     public func nextFrame() -> Frame? {
-        guard buffer.count >= 4 else { return nil }
+        let available = buffer.count - readHead
+        guard available >= 4 else { return nil }
+
+        let headerStart = buffer.startIndex + readHead
         let length = buffer.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) -> UInt32 in
-            (UInt32(ptr[0]) << 24) | (UInt32(ptr[1]) << 16) | (UInt32(ptr[2]) << 8) | UInt32(ptr[3])
+            let base = readHead
+            return (UInt32(ptr[base]) << 24) | (UInt32(ptr[base + 1]) << 16) |
+                   (UInt32(ptr[base + 2]) << 8) | UInt32(ptr[base + 3])
         }
         guard length >= 1 else {
-            buffer.removeFirst(4)
+            readHead += 4
+            compactIfNeeded()
             return nil
         }
-        guard buffer.count >= 4 + Int(length) else { return nil }
-        let typeByte = buffer[buffer.startIndex + 4]
-        let payloadRange = (buffer.startIndex + 5)..<(buffer.startIndex + 4 + Int(length))
+        guard available >= 4 + Int(length) else { return nil }
+
+        let typeByte = buffer[headerStart + 4]
+        let payloadRange = (headerStart + 5)..<(headerStart + 4 + Int(length))
         let payload = buffer.subdata(in: payloadRange)
-        buffer.removeSubrange(buffer.startIndex..<(buffer.startIndex + 4 + Int(length)))
+
+        readHead += 4 + Int(length)
+        compactIfNeeded()
 
         guard let type = MessageType(rawValue: typeByte) else {
             return nil
         }
         return Frame(type: type, payload: payload)
+    }
+
+    private func compactIfNeeded() {
+        // Compact when read head is beyond half the buffer to avoid unbounded growth
+        if readHead > 16384 && readHead > buffer.count / 2 {
+            buffer.removeSubrange(buffer.startIndex..<(buffer.startIndex + readHead))
+            readHead = 0
+        }
     }
 }
 

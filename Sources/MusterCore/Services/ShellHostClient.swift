@@ -14,21 +14,14 @@ public enum ShellHostError: Error {
 
 public struct AttentionEvent: Sendable {
     public enum Kind: Sendable {
-        case bell
-        case notify(title: String?, body: String)
-        case titleChanged(String)
-        case cwdChanged(String)
-        case promptMark(PromptMarkKind, exitCode: Int32?)
         case exited(code: Int32)
     }
     public let sessionId: UUID
     public let kind: Kind
-    public let timestamp: Date
 
-    public init(sessionId: UUID, kind: Kind, timestamp: Date = Date()) {
+    public init(sessionId: UUID, kind: Kind) {
         self.sessionId = sessionId
         self.kind = kind
-        self.timestamp = timestamp
     }
 }
 
@@ -42,8 +35,6 @@ public struct ShellSession: Sendable {
     private let _resize: @Sendable (UInt16, UInt16) -> Void
     private let _detach: @Sendable () -> Void
     private let _kill: @Sendable () -> Void
-    private let _markRead: @Sendable () -> Void
-    private let _setFocused: @Sendable (Bool) -> Void
 
     init(
         sessionId: UUID,
@@ -53,9 +44,7 @@ public struct ShellSession: Sendable {
         send: @escaping @Sendable (Data) -> Void,
         resize: @escaping @Sendable (UInt16, UInt16) -> Void,
         detach: @escaping @Sendable () -> Void,
-        kill: @escaping @Sendable () -> Void,
-        markRead: @escaping @Sendable () -> Void,
-        setFocused: @escaping @Sendable (Bool) -> Void
+        kill: @escaping @Sendable () -> Void
     ) {
         self.sessionId = sessionId
         self.output = output
@@ -65,16 +54,12 @@ public struct ShellSession: Sendable {
         self._resize = resize
         self._detach = detach
         self._kill = kill
-        self._markRead = markRead
-        self._setFocused = setFocused
     }
 
     public func send(_ data: Data) { _send(data) }
     public func resize(cols: UInt16, rows: UInt16) { _resize(cols, rows) }
     public func detach() { _detach() }
     public func kill() { _kill() }
-    public func markRead() { _markRead() }
-    public func setFocused(_ focused: Bool) { _setFocused(focused) }
 }
 
 public actor ShellHostClient {
@@ -108,8 +93,13 @@ public actor ShellHostClient {
     ) async throws -> ShellSession {
         let conn = try await ensureConnected()
 
+        // P0.2 fix: finish prior outputContinuation before overwriting
+        if let prior = sessions.removeValue(forKey: checkoutId) {
+            prior.outputContinuation.finish()
+        }
+
         var streamCont: AsyncStream<Data>.Continuation!
-        let stream = AsyncStream<Data>(bufferingPolicy: .unbounded) { c in
+        let stream = AsyncStream<Data>(bufferingPolicy: .bufferingNewest(10_000)) { c in
             streamCont = c
         }
         sessions[checkoutId] = SessionState(outputContinuation: streamCont)
@@ -124,6 +114,11 @@ public actor ShellHostClient {
         )
         let payload = try WireCodec.encode(req)
         conn.send(frame: Frame(type: .attach, payload: payload))
+
+        // P0.1 fix: resume any existing continuation before overwriting
+        if let existing = pendingAttach.removeValue(forKey: checkoutId) {
+            existing.resume(throwing: ShellHostError.attachFailed("superseded"))
+        }
 
         let ack = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<AttachAck, Error>) in
             pendingAttach[checkoutId] = cont
@@ -145,12 +140,6 @@ public actor ShellHostClient {
             },
             kill: { [weak self] in
                 Task { await self?.killSession(sessionId: checkoutId) }
-            },
-            markRead: { [weak self] in
-                Task { await self?.markRead(sessionId: checkoutId) }
-            },
-            setFocused: { [weak self] focused in
-                Task { await self?.setFocused(sessionId: checkoutId, focused: focused) }
             }
         )
     }
@@ -183,20 +172,6 @@ public actor ShellHostClient {
         let req = Kill(sessionId: sessionId)
         guard let p = try? WireCodec.encode(req) else { return }
         conn.send(frame: Frame(type: .kill, payload: p))
-    }
-
-    public func markRead(sessionId: UUID) {
-        guard let conn = connection else { return }
-        let req = MarkRead(sessionId: sessionId)
-        guard let p = try? WireCodec.encode(req) else { return }
-        conn.send(frame: Frame(type: .markRead, payload: p))
-    }
-
-    private func setFocused(sessionId: UUID, focused: Bool) {
-        guard let conn = connection else { return }
-        let req = SetFocused(sessionId: sessionId, focused: focused)
-        guard let p = try? WireCodec.encode(req) else { return }
-        conn.send(frame: Frame(type: .setFocused, payload: p))
     }
 
     /// Force the helper to quit. Sessions will be lost. Used for version-mismatch recovery.
@@ -306,6 +281,9 @@ public actor ShellHostClient {
         }
         connection.send(frame: Frame(type: .hello, payload: payload))
 
+        // P0.1 fix: resume any existing continuation before overwriting
+        pendingHello?.resume(throwing: ShellHostError.handshakeFailed("superseded"))
+
         let ack = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<HelloAck, Error>) in
             self.pendingHello = cont
         }
@@ -389,38 +367,6 @@ public actor ShellHostClient {
                 if let s = sessions.removeValue(forKey: ev.sessionId) {
                     s.outputContinuation.finish()
                 }
-            }
-
-        case .bell:
-            if let ev = try? WireCodec.decode(BellEvent.self, from: frame.payload) {
-                eventContinuation.yield(AttentionEvent(sessionId: ev.sessionId, kind: .bell, timestamp: ev.timestamp))
-            }
-
-        case .notify:
-            if let ev = try? WireCodec.decode(NotifyEvent.self, from: frame.payload) {
-                eventContinuation.yield(AttentionEvent(
-                    sessionId: ev.sessionId,
-                    kind: .notify(title: ev.title, body: ev.body),
-                    timestamp: ev.timestamp
-                ))
-            }
-
-        case .titleChanged:
-            if let ev = try? WireCodec.decode(TitleChangedEvent.self, from: frame.payload) {
-                eventContinuation.yield(AttentionEvent(sessionId: ev.sessionId, kind: .titleChanged(ev.title)))
-            }
-
-        case .cwdChanged:
-            if let ev = try? WireCodec.decode(CwdChangedEvent.self, from: frame.payload) {
-                eventContinuation.yield(AttentionEvent(sessionId: ev.sessionId, kind: .cwdChanged(ev.path)))
-            }
-
-        case .promptMark:
-            if let ev = try? WireCodec.decode(PromptMarkEvent.self, from: frame.payload) {
-                eventContinuation.yield(AttentionEvent(
-                    sessionId: ev.sessionId,
-                    kind: .promptMark(ev.kind, exitCode: ev.exitCode)
-                ))
             }
 
         case .errorMessage:

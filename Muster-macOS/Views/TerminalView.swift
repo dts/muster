@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import SwiftTerm
 import MusterCore
+import MusterShellProtocol
 
 @MainActor
 final class TerminalCache {
@@ -26,12 +27,89 @@ final class TerminalCache {
     }
 }
 
+/// Scans byte stream for OSC 9/777/133 sequences not exposed by SwiftTerm delegates.
+final class OSCScanner: @unchecked Sendable {
+    enum Event: Sendable {
+        case notify(title: String?, body: String)
+        case promptMark(PromptMarkKind, exitCode: Int32?)
+    }
+
+    private enum State {
+        case normal
+        case escape
+        case osc(buf: [UInt8])
+        case oscEsc(buf: [UInt8])
+    }
+
+    private var state: State = .normal
+    private var pending: [Event] = []
+
+    func feed(_ data: Data) -> [Event] {
+        for byte in data {
+            switch state {
+            case .normal:
+                if byte == 0x1b { state = .escape }
+            case .escape:
+                if byte == 0x5d { state = .osc(buf: []) }
+                else { state = .normal }
+            case .osc(var buf):
+                if byte == 0x07 {
+                    dispatchOSC(buf)
+                    state = .normal
+                } else if byte == 0x1b {
+                    state = .oscEsc(buf: buf)
+                } else {
+                    if buf.count < 4096 { buf.append(byte) }
+                    state = .osc(buf: buf)
+                }
+            case .oscEsc(let buf):
+                if byte == 0x5c { dispatchOSC(buf) }
+                state = .normal
+            }
+        }
+        let out = pending
+        pending.removeAll(keepingCapacity: true)
+        return out
+    }
+
+    private func dispatchOSC(_ buf: [UInt8]) {
+        guard let str = String(bytes: buf, encoding: .utf8),
+              let semi = str.firstIndex(of: ";") else { return }
+        let code = String(str[..<semi])
+        let rest = String(str[str.index(after: semi)...])
+
+        switch code {
+        case "9":
+            pending.append(.notify(title: nil, body: rest))
+        case "777":
+            let parts = rest.split(separator: ";", maxSplits: 2, omittingEmptySubsequences: false)
+            if parts.count >= 3 && parts[0] == "notify" {
+                pending.append(.notify(title: String(parts[1]), body: String(parts[2])))
+            }
+        case "133":
+            let parts = rest.split(separator: ";", omittingEmptySubsequences: false)
+            guard let kindToken = parts.first.map(String.init) else { return }
+            switch kindToken {
+            case "A": pending.append(.promptMark(.promptStart, exitCode: nil))
+            case "B": pending.append(.promptMark(.promptEnd, exitCode: nil))
+            case "C": pending.append(.promptMark(.outputStart, exitCode: nil))
+            case "D":
+                let exit = parts.count > 1 ? Int32(String(parts[1])) : nil
+                pending.append(.promptMark(.commandEnd, exitCode: exit))
+            default: break
+            }
+        default: break
+        }
+    }
+}
+
 @MainActor
 final class RemoteTerminalView: SwiftTerm.TerminalView, TerminalViewDelegate {
     let checkoutId: UUID
     private let cwd: String
     private var session: ShellSession?
     private var pumpTask: Task<Void, Never>?
+    private let oscScanner = OSCScanner()
 
     init(checkoutId: UUID, cwd: String) {
         self.checkoutId = checkoutId
@@ -59,12 +137,18 @@ final class RemoteTerminalView: SwiftTerm.TerminalView, TerminalViewDelegate {
                 rows: rows
             )
             self.session = s
-            self.pumpTask = Task { [weak self] in
+            self.pumpTask = Task { @MainActor [weak self] in
+                guard let self else { return }
                 for await data in s.output {
-                    let bytes = [UInt8](data)
-                    await MainActor.run {
-                        self?.feed(byteArray: bytes[...])
+                    for ev in self.oscScanner.feed(data) {
+                        switch ev {
+                        case .notify(let title, let body):
+                            AttentionStore.shared.handleNotify(checkoutId: self.checkoutId, title: title, body: body)
+                        case .promptMark(let kind, let exitCode):
+                            AttentionStore.shared.handlePromptMark(checkoutId: self.checkoutId, kind: kind, exitCode: exitCode)
+                        }
                     }
+                    self.feed(byteArray: [UInt8](data)[...])
                 }
             }
         } catch {
@@ -101,9 +185,22 @@ final class RemoteTerminalView: SwiftTerm.TerminalView, TerminalViewDelegate {
         }
     }
 
-    nonisolated func setTerminalTitle(source: SwiftTerm.TerminalView, title: String) {}
-    nonisolated func hostCurrentDirectoryUpdate(source: SwiftTerm.TerminalView, directory: String?) {}
+    nonisolated func setTerminalTitle(source: SwiftTerm.TerminalView, title: String) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            AttentionStore.shared.handleTitle(checkoutId: self.checkoutId, title: title)
+        }
+    }
+
+    nonisolated func hostCurrentDirectoryUpdate(source: SwiftTerm.TerminalView, directory: String?) {
+        Task { @MainActor [weak self] in
+            guard let self, let dir = directory else { return }
+            AttentionStore.shared.handleCwd(checkoutId: self.checkoutId, path: dir)
+        }
+    }
+
     nonisolated func scrolled(source: SwiftTerm.TerminalView, position: Double) {}
+
     nonisolated func clipboardCopy(source: SwiftTerm.TerminalView, content: Data) {
         Task { @MainActor in
             if let s = String(data: content, encoding: .utf8) {
@@ -112,9 +209,17 @@ final class RemoteTerminalView: SwiftTerm.TerminalView, TerminalViewDelegate {
             }
         }
     }
+
     nonisolated func rangeChanged(source: SwiftTerm.TerminalView, startY: Int, endY: Int) {}
     nonisolated func iTermContent(source: SwiftTerm.TerminalView, content: ArraySlice<UInt8>) {}
-    nonisolated func bell(source: SwiftTerm.TerminalView) {}
+
+    nonisolated func bell(source: SwiftTerm.TerminalView) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            AttentionStore.shared.handleBell(checkoutId: self.checkoutId)
+        }
+    }
+
     nonisolated func requestOpenLink(source: SwiftTerm.TerminalView, link: String, params: [String : String]) {
         if let url = URL(string: link) {
             Task { @MainActor in
