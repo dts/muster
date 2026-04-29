@@ -10,6 +10,10 @@ struct ContentView: View {
     @State private var showingAddRepo = false
     @State private var ingestBanner: String?
 
+    private var allCheckouts: [Checkout] {
+        repositories.flatMap(\.checkouts)
+    }
+
     var body: some View {
         NavigationSplitView {
             SidebarView(
@@ -79,6 +83,38 @@ struct ContentView: View {
             if !parts.isEmpty {
                 withAnimation { ingestBanner = parts.joined(separator: ", ").capitalizedFirst }
             }
+        }
+        .onAppear {
+            setupBranchMonitoring()
+        }
+        .onChange(of: allCheckouts.map(\.path)) { _, newPaths in
+            updateBranchMonitoring(for: newPaths)
+        }
+    }
+}
+
+extension ContentView {
+    private func setupBranchMonitoring() {
+        GitHeadMonitor.shared.onBranchChange = { change in
+            handleBranchChange(change)
+        }
+        for checkout in allCheckouts {
+            GitHeadMonitor.shared.startMonitoring(checkoutPath: checkout.path)
+        }
+    }
+
+    private func updateBranchMonitoring(for paths: [String]) {
+        GitHeadMonitor.shared.stopAll()
+        for path in paths {
+            GitHeadMonitor.shared.startMonitoring(checkoutPath: path)
+        }
+    }
+
+    private func handleBranchChange(_ change: BranchChange) {
+        guard let checkout = allCheckouts.first(where: { $0.path == change.checkoutPath }) else { return }
+        if checkout.branch != change.newBranch {
+            checkout.branch = change.newBranch
+            try? modelContext.save()
         }
     }
 }
