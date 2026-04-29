@@ -2,7 +2,7 @@ name: Muster
 options:
   bundleIdPrefix: com.muster
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "26.0"
   xcodeVersion: "15.3"
 
 packages:
@@ -30,7 +30,7 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Muster
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         SWIFT_VERSION: "5.10"
-        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "-"
     dependencies:
