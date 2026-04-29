@@ -25,19 +25,17 @@ struct TerminalContainerView: View {
                         Text(checkout.branch)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule().fill(Color.secondary.opacity(0.15))
-                            )
                             .padding(.leading, 4)
                     }
                 }
+                .sharedBackgroundVisibility(.hidden)
 
                 ToolbarItem(placement: .primaryAction) {
                     PRButton(checkout: checkout, prInfo: prInfo, isLoading: isCheckingPR)
                 }
+                .sharedBackgroundVisibility(.hidden)
             }
+            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
             .task(id: checkout.path) {
                 await checkForPR()
             }

@@ -50,12 +50,8 @@ struct ContentView: View {
                         } label: { Image(systemName: "xmark") }
                         .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule().fill(Color.accentColor.opacity(0.15))
-                    )
                 }
+                .sharedBackgroundVisibility(.hidden)
             }
         }
         .sheet(isPresented: $showingAddRepo) {
