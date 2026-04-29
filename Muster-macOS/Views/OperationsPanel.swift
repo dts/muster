@@ -35,7 +35,22 @@ struct OperationSidebarRow: View {
 
 struct OperationDetailView: View {
     let operation: Operation
+    @Binding var selection: SidebarSelection?
     @State private var store = OperationStore.shared
+
+    private func dismissAndSelectNext() {
+        let operations = store.operations
+        if let currentIndex = operations.firstIndex(where: { $0 === operation }) {
+            if currentIndex + 1 < operations.count {
+                selection = .operation(operations[currentIndex + 1])
+            } else if currentIndex > 0 {
+                selection = .operation(operations[currentIndex - 1])
+            } else {
+                selection = nil
+            }
+        }
+        store.dismiss(operation)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -64,7 +79,7 @@ struct OperationDetailView: View {
                 Spacer()
                 if operation.status.isTerminal {
                     Button("Dismiss") {
-                        store.dismiss(operation)
+                        dismissAndSelectNext()
                     }
                     .controlSize(.small)
                 }
