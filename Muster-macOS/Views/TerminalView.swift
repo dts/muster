@@ -16,8 +16,13 @@ final class TerminalCache {
         let terminalView = SwiftTerm.LocalProcessTerminalView(frame: .zero)
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
 
+        var envDict = ProcessInfo.processInfo.environment
+        envDict["TERM"] = "xterm-256color"
+        envDict["COLORTERM"] = "truecolor"
+        envDict["LANG"] = envDict["LANG"] ?? "en_US.UTF-8"
+
         var env: [String] = []
-        for (key, value) in ProcessInfo.processInfo.environment {
+        for (key, value) in envDict {
             env.append("\(key)=\(value)")
         }
 
