@@ -38,7 +38,7 @@ struct TerminalContainerView: View {
                     PRButton(checkout: checkout, prInfo: prInfo, isLoading: isCheckingPR)
                 }
             }
-            .task {
+            .task(id: checkout.path) {
                 await checkForPR()
             }
     }
