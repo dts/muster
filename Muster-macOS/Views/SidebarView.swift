@@ -46,10 +46,7 @@ struct SidebarView: View {
                             .contextMenu {
                                 if op.status.isTerminal {
                                     Button(role: .destructive) {
-                                        if case .operation(let selOp) = selection, selOp === op {
-                                            selection = nil
-                                        }
-                                        store.dismiss(op)
+                                        dismissAndSelectNext(op)
                                     } label: {
                                         Label("Dismiss", systemImage: "xmark.circle")
                                     }
@@ -207,6 +204,22 @@ struct SidebarView: View {
         .onAppear {
             expandedRepos = Set(repositories.map(\.id))
         }
+    }
+
+    private func dismissAndSelectNext(_ op: Operation) {
+        if case .operation(let selOp) = selection, selOp === op {
+            let operations = store.operations
+            if let currentIndex = operations.firstIndex(where: { $0 === op }) {
+                if currentIndex + 1 < operations.count {
+                    selection = .operation(operations[currentIndex + 1])
+                } else if currentIndex > 0 {
+                    selection = .operation(operations[currentIndex - 1])
+                } else {
+                    selection = nil
+                }
+            }
+        }
+        store.dismiss(op)
     }
 
     private func delete(checkout: Checkout) {

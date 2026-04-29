@@ -23,7 +23,8 @@ struct ContentView: View {
             case .checkout(let checkout):
                 TerminalContainerView(checkout: checkout)
             case .operation(let op):
-                OperationDetailView(operation: op)
+                OperationDetailView(operation: op, selection: $selection)
+                    .id(op.id)
             case .none:
                 VStack(spacing: 16) {
                     Image("Sheep")
