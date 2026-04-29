@@ -127,13 +127,16 @@ public actor GitService {
         return output
     }
 
-    nonisolated static func runStreaming(_ arguments: [String], at workingDirectory: URL? = nil) -> AsyncThrowingStream<String, Error> {
+    nonisolated static func runStreaming(_ arguments: [String], at workingDirectory: URL? = nil, environment: [String: String]? = nil) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             process.arguments = arguments
             if let workingDirectory {
                 process.currentDirectoryURL = workingDirectory
+            }
+            if let environment {
+                process.environment = environment
             }
 
             let pipe = Pipe()
