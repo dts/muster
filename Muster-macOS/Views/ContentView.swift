@@ -30,6 +30,11 @@ struct ContentView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 240, height: 240)
+                        .clipShape(RoundedRectangle(cornerRadius: 32))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 32)
+                                .stroke(Color.secondary.opacity(0.3), lineWidth: 2)
+                        )
                     Text("No Checkout Selected")
                         .font(.title2)
                         .fontWeight(.medium)
