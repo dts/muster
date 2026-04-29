@@ -2,15 +2,30 @@ import SwiftUI
 import MusterCore
 
 struct TerminalContainerView: View {
-    let checkout: Checkout
+    @Bindable var checkout: Checkout
 
     @State private var prInfo: PRInfo?
     @State private var isCheckingPR = false
 
     var body: some View {
-        TerminalView(workingDirectory: checkout.path)
-            .id(checkout.path)
-            .toolbar {
+        VStack(spacing: 0) {
+            if let status = checkout.setupStatus {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .frame(width: 16, height: 16)
+                    Text(status)
+                        .font(.callout)
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(.yellow.opacity(0.2))
+            }
+            TerminalView(workingDirectory: checkout.path)
+                .id(checkout.path)
+        }
+        .toolbar {
                 ToolbarItem(placement: .navigation) {
                     HStack(spacing: 6) {
                         Image(systemName: "terminal")
