@@ -36,7 +36,7 @@ struct TerminalContainerView: View {
                 .sharedBackgroundVisibility(.hidden)
             }
             .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-            .task {
+            .task(id: checkout.path) {
                 await checkForPR()
             }
     }
