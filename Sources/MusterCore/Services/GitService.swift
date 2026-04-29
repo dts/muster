@@ -80,6 +80,23 @@ public actor GitService {
         return !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    public func remoteBranches(at repoPath: URL) async throws -> Set<String> {
+        let output = try await Self.runWithOutput([
+            "git", "-C", repoPath.path, "branch", "-r", "--format=%(refname:short)"
+        ])
+        let branches = output
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .map { branch -> String in
+                if branch.hasPrefix("origin/") {
+                    return String(branch.dropFirst(7))
+                }
+                return branch
+            }
+        return Set(branches)
+    }
+
     @discardableResult
     nonisolated static func run(_ arguments: [String], at workingDirectory: URL? = nil) async throws -> Process {
         let process = Process()
