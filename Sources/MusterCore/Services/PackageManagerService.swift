@@ -26,17 +26,19 @@ public actor PackageManagerService {
     }
 
     public func install(at path: URL, packageManager: PackageManager, offline: Bool) async throws -> InstallResult {
+        let env = try? await FNMService.shared.environmentForPath(path)
+
         if offline {
             do {
-                try await run(packageManager.offlineInstallCommand, at: path)
+                try await run(packageManager.offlineInstallCommand, at: path, environment: env)
                 return InstallResult(usedOffline: true, fallbackReason: nil)
             } catch {
                 let reason = "Offline install failed: \(error.localizedDescription). Retrying with network..."
-                try await run(packageManager.installCommand, at: path)
+                try await run(packageManager.installCommand, at: path, environment: env)
                 return InstallResult(usedOffline: false, fallbackReason: reason)
             }
         } else {
-            try await run(packageManager.installCommand, at: path)
+            try await run(packageManager.installCommand, at: path, environment: env)
             return InstallResult(usedOffline: false, fallbackReason: nil)
         }
     }
@@ -48,8 +50,9 @@ public actor PackageManagerService {
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
+                let env = try? await FNMService.shared.environmentForPath(path)
                 let primary = offline ? packageManager.offlineInstallCommand : packageManager.installCommand
-                let primaryStream = GitService.runStreaming(primary, at: path)
+                let primaryStream = GitService.runStreaming(primary, at: path, environment: env)
                 do {
                     for try await line in primaryStream {
                         continuation.yield(line)
@@ -58,7 +61,7 @@ public actor PackageManagerService {
                 } catch {
                     if offline {
                         continuation.yield("[offline install failed — retrying online]")
-                        let fallback = GitService.runStreaming(packageManager.installCommand, at: path)
+                        let fallback = GitService.runStreaming(packageManager.installCommand, at: path, environment: env)
                         do {
                             for try await line in fallback {
                                 continuation.yield(line)
@@ -75,11 +78,14 @@ public actor PackageManagerService {
         }
     }
 
-    private func run(_ arguments: [String], at workingDirectory: URL) async throws {
+    private func run(_ arguments: [String], at workingDirectory: URL, environment: [String: String]? = nil) async throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = arguments
         process.currentDirectoryURL = workingDirectory
+        if let environment {
+            process.environment = environment
+        }
 
         let pipe = Pipe()
         process.standardOutput = pipe
