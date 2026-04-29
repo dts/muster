@@ -7,12 +7,11 @@ public struct PTY {
 }
 
 public enum PTYError: Error {
-    case openptyFailed(errno: Int32)
-    case spawnFailed(errno: Int32)
+    case forkFailed(errno: Int32)
 }
 
-/// Spawns a child process with a pseudo-terminal via posix_spawn.
-/// Returns master fd + child pid in the parent.
+/// Forks a child process with a pseudo-terminal, execs the given shell.
+/// Returns master fd + child pid in the parent. Child does not return.
 public func spawnShellInPTY(
     executable: String,
     args: [String],
@@ -21,19 +20,10 @@ public func spawnShellInPTY(
     cols: UInt16,
     rows: UInt16
 ) throws -> PTY {
-    var masterFd: Int32 = -1
-    var slaveFd: Int32 = -1
-
-    // openpty creates a PTY pair
-    if openpty(&masterFd, &slaveFd, nil, nil, nil) < 0 {
-        throw PTYError.openptyFailed(errno: errno)
-    }
-
-    // Set initial window size on slave
     var ws = winsize(ws_row: rows, ws_col: cols, ws_xpixel: 0, ws_ypixel: 0)
-    _ = ioctl(slaveFd, TIOCSWINSZ, &ws)
+    var masterFd: Int32 = -1
 
-    // Build C strings for posix_spawn
+    // Build C strings BEFORE fork using raw pointers (async-signal-safe)
     let argvStrings = ([executable] + args).map { strdup($0)! }
     let argvArray = UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>.allocate(capacity: argvStrings.count + 1)
     for (i, p) in argvStrings.enumerated() { argvArray[i] = p }
@@ -44,47 +34,43 @@ public func spawnShellInPTY(
     for (i, p) in envStrings.enumerated() { envArray[i] = p }
     envArray[envStrings.count] = nil
 
+    let cwdC = strdup(cwd)!
+    let execC = strdup(executable)!
+
     defer {
         for p in argvStrings { free(p) }
         for p in envStrings { free(p) }
         argvArray.deallocate()
         envArray.deallocate()
+        free(cwdC)
+        free(execC)
     }
 
-    // File actions: dup slave fd to stdin/stdout/stderr, close others
-    var fileActions: posix_spawn_file_actions_t? = nil
-    posix_spawn_file_actions_init(&fileActions)
-    defer { posix_spawn_file_actions_destroy(&fileActions) }
+    let pid = forkpty(&masterFd, nil, nil, &ws)
 
-    posix_spawn_file_actions_adddup2(&fileActions, slaveFd, STDIN_FILENO)
-    posix_spawn_file_actions_adddup2(&fileActions, slaveFd, STDOUT_FILENO)
-    posix_spawn_file_actions_adddup2(&fileActions, slaveFd, STDERR_FILENO)
-    posix_spawn_file_actions_addclose(&fileActions, slaveFd)
-    posix_spawn_file_actions_addclose(&fileActions, masterFd)
-
-    // Spawn attributes: new session, start in cwd
-    var attr: posix_spawnattr_t? = nil
-    posix_spawnattr_init(&attr)
-    defer { posix_spawnattr_destroy(&attr) }
-    posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT))
-
-    // Change to working directory before spawn
-    let originalCwd = FileManager.default.currentDirectoryPath
-    _ = chdir(cwd)
-    defer { _ = chdir(originalCwd) }
-
-    var pid: pid_t = 0
-    let result = posix_spawn(&pid, executable, &fileActions, &attr, argvArray, envArray)
-
-    // Close slave fd in parent (child has its own copy)
-    close(slaveFd)
-
-    if result != 0 {
-        close(masterFd)
-        throw PTYError.spawnFailed(errno: result)
+    if pid < 0 {
+        throw PTYError.forkFailed(errno: errno)
     }
 
-    // Set master fd to non-blocking
+    if pid == 0 {
+        // Child. Only async-signal-safe calls from here.
+        _ = chdir(cwdC)
+
+        // Close inherited fds > 2
+        let maxFd = Int32(getdtablesize())
+        var fd: Int32 = 3
+        while fd < maxFd {
+            _ = close(fd)
+            fd += 1
+        }
+
+        // Use raw C pointers directly (no Swift runtime calls)
+        execve(execC, argvArray, envArray)
+        // exec only returns on failure
+        _exit(127)
+    }
+
+    // Parent
     let flags = fcntl(masterFd, F_GETFL, 0)
     _ = fcntl(masterFd, F_SETFL, flags | O_NONBLOCK)
 

@@ -99,7 +99,7 @@ public actor ShellHostClient {
         }
 
         var streamCont: AsyncStream<Data>.Continuation!
-        let stream = AsyncStream<Data>(bufferingPolicy: .bufferingNewest(10_000)) { c in
+        let stream = AsyncStream<Data>(bufferingPolicy: .unbounded) { c in
             streamCont = c
         }
         sessions[checkoutId] = SessionState(outputContinuation: streamCont)
