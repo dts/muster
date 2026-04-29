@@ -19,6 +19,10 @@ struct SidebarView: View {
     @State private var repoForNewCheckout: Repository?
     @State private var checkoutToDelete: Checkout?
     @State private var repoToDelete: Repository?
+    @State private var checkoutToRename: Checkout?
+    @State private var renameText: String = ""
+    @State private var dropTargetId: UUID?
+    @State private var draggingCheckoutId: UUID?
 
     private var selectedCheckoutBinding: Binding<Checkout?> {
         Binding(
@@ -69,16 +73,47 @@ struct SidebarView: View {
                             }
                         )
                     ) {
-                        ForEach(repo.checkouts) { checkout in
-                            CheckoutRow(checkout: checkout)
-                                .tag(SidebarSelection.checkout(checkout))
-                                .contextMenu {
-                                    Button(role: .destructive) {
-                                        checkoutToDelete = checkout
-                                    } label: {
-                                        Label("Delete Checkout…", systemImage: "trash")
-                                    }
+                        ForEach(sortedCheckouts(for: repo)) { checkout in
+                            VStack(spacing: 0) {
+                                if dropTargetId == checkout.id && draggingCheckoutId != nil && draggingCheckoutId != checkout.id {
+                                    InsertionMarker()
                                 }
+                                CheckoutRow(checkout: checkout)
+                                    .opacity(checkout.id == draggingCheckoutId ? 0.3 : 1.0)
+                            }
+                            .tag(SidebarSelection.checkout(checkout))
+                            .draggable(checkout.id.uuidString) {
+                                Text(checkout.resolvedDisplayName)
+                                    .padding(8)
+                                    .background(Color(nsColor: .controlBackgroundColor))
+                                    .cornerRadius(4)
+                                    .onAppear { draggingCheckoutId = checkout.id }
+                            }
+                            .dropDestination(for: String.self) { items, _ in
+                                let targetId = checkout.id
+                                dropTargetId = nil
+                                draggingCheckoutId = nil
+                                guard let draggedId = items.first,
+                                      let draggedUUID = UUID(uuidString: draggedId) else { return false }
+                                reorderCheckout(draggedId: draggedUUID, onto: targetId, in: repo)
+                                return true
+                            } isTargeted: { isTargeted in
+                                dropTargetId = isTargeted ? checkout.id : nil
+                            }
+                            .contextMenu {
+                                Button {
+                                    renameText = checkout.resolvedDisplayName
+                                    checkoutToRename = checkout
+                                } label: {
+                                    Label("Rename…", systemImage: "pencil")
+                                }
+                                Divider()
+                                Button(role: .destructive) {
+                                    checkoutToDelete = checkout
+                                } label: {
+                                    Label("Delete Checkout…", systemImage: "trash")
+                                }
+                            }
                         }
 
                         Button {
@@ -111,7 +146,7 @@ struct SidebarView: View {
             NewCheckoutView(repository: repo)
         }
         .alert(
-            "Delete checkout \"\(checkoutToDelete?.name ?? "")\"?",
+            "Delete checkout \"\(checkoutToDelete?.resolvedDisplayName ?? "")\"?",
             isPresented: Binding(
                 get: { checkoutToDelete != nil },
                 set: { if !$0 { checkoutToDelete = nil } }
@@ -143,6 +178,23 @@ struct SidebarView: View {
                 ? "(no checkouts)"
                 : "and \(n) checkout\(n == 1 ? "" : "s") under ~/muster/\(repo.displayName)"
             Text("This removes the master copy at \(repo.masterPath) \(checkoutBit). This cannot be undone.")
+        }
+        .alert(
+            "Rename Checkout",
+            isPresented: Binding(
+                get: { checkoutToRename != nil },
+                set: { if !$0 { checkoutToRename = nil } }
+            ),
+            presenting: checkoutToRename
+        ) { checkout in
+            TextField("Name", text: $renameText)
+            Button("Rename") {
+                checkout.displayName = renameText
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("Enter a new display name for this checkout.")
         }
         .listStyle(.sidebar)
         .toolbar {
@@ -177,6 +229,32 @@ struct SidebarView: View {
         modelContext.delete(repository)
         try? modelContext.save()
     }
+
+    private func sortedCheckouts(for repo: Repository) -> [Checkout] {
+        repo.checkouts.sorted { a, b in
+            if a.order != b.order {
+                return a.order < b.order
+            }
+            return a.createdAt < b.createdAt
+        }
+    }
+
+    private func reorderCheckout(draggedId: UUID, onto targetId: UUID, in repo: Repository) {
+        guard let dragged = repo.checkouts.first(where: { $0.id == draggedId }),
+              draggedId != targetId else { return }
+
+        var sorted = sortedCheckouts(for: repo)
+        sorted.removeAll { $0.id == dragged.id }
+
+        if let targetIndex = sorted.firstIndex(where: { $0.id == targetId }) {
+            sorted.insert(dragged, at: targetIndex)
+        }
+
+        for (index, checkout) in sorted.enumerated() {
+            checkout.order = index
+        }
+        try? modelContext.save()
+    }
 }
 
 struct RepositoryRow: View {
@@ -204,7 +282,7 @@ struct CheckoutRow: View {
             Image(systemName: "arrow.branch")
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
-                Text(checkout.name)
+                Text(checkout.resolvedDisplayName)
                 Text(checkout.branch)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -259,3 +337,20 @@ struct DepsStateIndicator: View {
         }
     }
 }
+
+struct InsertionMarker: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 6, height: 6)
+            Rectangle()
+                .fill(Color.accentColor)
+                .frame(height: 2)
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
+        .padding(.vertical, 2)
+    }
+}
+

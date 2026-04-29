@@ -11,6 +11,8 @@ struct NewCheckoutView: View {
     @State private var name = ""
     @State private var branch = ""
     @State private var createNewBranch = false
+    @State private var remoteBranches: Set<String> = []
+    @State private var loadingBranches = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -20,15 +22,35 @@ struct NewCheckoutView: View {
 
             TextField("Checkout name (e.g., feature-auth)", text: $name)
                 .textFieldStyle(.roundedBorder)
-            Toggle("Create new branch", isOn: $createNewBranch)
+            TextField("Branch (default: \(repository.defaultBranch))", text: $branch)
+                .textFieldStyle(.roundedBorder)
+                .onChange(of: branch) { _, newValue in
+                    let target = newValue.isEmpty ? repository.defaultBranch : newValue
+                    createNewBranch = !remoteBranches.contains(target)
+                }
 
-            if createNewBranch {
-                TextField("Branch name", text: $branch)
-                    .textFieldStyle(.roundedBorder)
-            } else {
-                TextField("Branch (default: \(repository.defaultBranch))", text: $branch)
-                    .textFieldStyle(.roundedBorder)
+            HStack(spacing: 6) {
+                if loadingBranches {
+                    ProgressView()
+                        .scaleEffect(0.5)
+                    Text("Checking branches…")
+                        .foregroundStyle(.secondary)
+                } else {
+                    let target = branch.isEmpty ? repository.defaultBranch : branch
+                    if remoteBranches.contains(target) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Will check out existing branch")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(.blue)
+                        Text("Will create new branch")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
+            .font(.caption)
 
             Text("Setup runs in the background — close this and start more.")
                 .font(.caption)
@@ -45,7 +67,16 @@ struct NewCheckoutView: View {
         }
         .padding(24)
         .frame(minWidth: 480)
-        .onAppear { branch = repository.defaultBranch }
+        .onAppear {
+            Task {
+                let masterPath = URL(fileURLWithPath: repository.masterPath)
+                if let branches = try? await GitService.shared.remoteBranches(at: masterPath) {
+                    remoteBranches = branches
+                    createNewBranch = !branches.contains(repository.defaultBranch)
+                }
+                loadingBranches = false
+            }
+        }
     }
 
     private func submit() {
@@ -122,7 +153,14 @@ struct NewCheckoutView: View {
                 }
             }
 
-            let checkout = Checkout(name: sluggedName, path: checkoutPath.path, branch: target)
+            let nextOrder = (captured.repo.checkouts.map(\.order).max() ?? -1) + 1
+            let checkout = Checkout(
+                name: sluggedName,
+                displayName: captured.name,
+                path: checkoutPath.path,
+                branch: target,
+                order: nextOrder
+            )
             checkout.repository = captured.repo
             context.insert(checkout)
             try context.save()
