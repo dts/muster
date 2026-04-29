@@ -22,7 +22,7 @@ struct TerminalContainerView: View {
                 .padding(.vertical, 8)
                 .background(.yellow.opacity(0.2))
             }
-            TerminalView(workingDirectory: checkout.path)
+            TerminalView(checkout: checkout)
                 .id(checkout.path)
         }
         .toolbar {

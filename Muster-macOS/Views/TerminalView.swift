@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import SwiftTerm
+import MusterCore
 
 final class MusterTerminalView: LocalProcessTerminalView {
     var workingDirectory: String = ""
@@ -107,15 +108,15 @@ final class TerminalCache {
         }
     }
 
-    func view(for workingDirectory: String) -> MusterTerminalView {
-        if let existing = views[workingDirectory] {
-            NSLog("[muster] Returning cached terminal for \(workingDirectory)")
+    func view(for checkout: Checkout) -> MusterTerminalView {
+        if let existing = views[checkout.path] {
+            NSLog("[muster] Returning cached terminal for \(checkout.path)")
             return existing
         }
 
-        NSLog("[muster] Creating new MusterTerminalView for \(workingDirectory)")
+        NSLog("[muster] Creating new MusterTerminalView for \(checkout.path)")
         let terminalView = MusterTerminalView(frame: .zero)
-        terminalView.workingDirectory = workingDirectory
+        terminalView.workingDirectory = checkout.path
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
 
         var envDict = ProcessInfo.processInfo.environment
@@ -128,6 +129,14 @@ final class TerminalCache {
             env.append("\(key)=\(value)")
         }
 
+        env.append("MUSTER=1")
+        env.append("MUSTER_CHECKOUT=\(checkout.path)")
+        env.append("MUSTER_CHECKOUT_NAME=\(checkout.name)")
+        env.append("MUSTER_BRANCH=\(checkout.branch)")
+        if let repoName = checkout.repository?.displayName {
+            env.append("MUSTER_REPO=\(repoName)")
+        }
+
         terminalView.startProcess(
             executable: shell,
             args: ["-l"],
@@ -135,24 +144,24 @@ final class TerminalCache {
             execName: "-" + (shell as NSString).lastPathComponent
         )
 
-        if !workingDirectory.isEmpty {
-            terminalView.send(txt: "cd \(workingDirectory.shellEscaped) && clear\n")
+        if !checkout.path.isEmpty {
+            terminalView.send(txt: "cd \(checkout.path.shellEscaped) && clear\n")
         }
 
-        views[workingDirectory] = terminalView
+        views[checkout.path] = terminalView
         return terminalView
     }
 
-    func discard(workingDirectory: String) {
-        views.removeValue(forKey: workingDirectory)
+    func discard(path: String) {
+        views.removeValue(forKey: path)
     }
 }
 
 struct TerminalView: NSViewRepresentable {
-    let workingDirectory: String
+    let checkout: Checkout
 
     func makeNSView(context: Context) -> MusterTerminalView {
-        let view = TerminalCache.shared.view(for: workingDirectory)
+        let view = TerminalCache.shared.view(for: checkout)
         view.processDelegate = context.coordinator
         focus(view)
         return view
@@ -169,7 +178,7 @@ struct TerminalView: NSViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(workingDirectory: workingDirectory)
+        Coordinator(workingDirectory: checkout.path)
     }
 
     class Coordinator: NSObject, LocalProcessTerminalViewDelegate {
@@ -200,6 +209,6 @@ extension String {
 }
 
 #Preview {
-    TerminalView(workingDirectory: NSHomeDirectory())
+    TerminalView(checkout: Checkout(name: "preview", path: NSHomeDirectory(), branch: "main"))
         .frame(width: 600, height: 400)
 }
