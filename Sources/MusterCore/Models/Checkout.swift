@@ -19,6 +19,7 @@ public final class Checkout {
     public var createdAt: Date = Date()
     public var order: Int = 0
     @Transient public var depsState: DepsState = .current
+    @Transient public var setupStatus: String?
 
     public var repository: Repository?
 

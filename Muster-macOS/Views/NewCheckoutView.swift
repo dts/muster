@@ -106,13 +106,30 @@ struct NewCheckoutView: View {
             checkoutName: sluggedName
         )
         let masterPath = URL(fileURLWithPath: captured.repo.masterPath)
-        var weCreatedDir = false
-        var insertedCheckout: Checkout?
+        let target = captured.branch.isEmpty ? captured.repo.defaultBranch : captured.branch
+
+        let nextOrder = (captured.repo.checkouts.map(\.order).max() ?? -1) + 1
+        let checkout = Checkout(
+            name: sluggedName,
+            displayName: captured.name,
+            path: checkoutPath.path,
+            branch: target,
+            order: nextOrder
+        )
+        checkout.repository = captured.repo
+        checkout.setupStatus = "Starting…"
+        context.insert(checkout)
+        try? context.save()
+
+        func updateStatus(_ status: String) {
+            op.setStatus(status)
+            checkout.setupStatus = status
+        }
 
         do {
             if fm.fileExists(atPath: checkoutPath.path) {
                 let pathString = checkoutPath.path
-                let claimed = captured.repo.checkouts.contains { $0.path == pathString }
+                let claimed = captured.repo.checkouts.contains { $0.path == pathString && $0.id != checkout.id }
                 if claimed {
                     throw NSError(domain: "Muster", code: 1, userInfo: [
                         NSLocalizedDescriptionKey: "A checkout named \"\(sluggedName)\" already exists for this repo."
@@ -122,53 +139,38 @@ struct NewCheckoutView: View {
                 try fm.removeItem(at: checkoutPath)
             }
 
-            op.setStatus("Cloning from master…")
+            updateStatus("Cloning from master…")
             for try await line in GitService.shared.cloneLocalStreaming(from: masterPath, to: checkoutPath) {
                 op.append(line)
             }
-            weCreatedDir = true
 
-            op.setStatus("Copying refs from master…")
+            updateStatus("Copying refs from master…")
             try await GitService.shared.copyRemoteRefs(from: masterPath, at: checkoutPath)
 
-            op.setStatus("Configuring remote…")
+            updateStatus("Configuring remote…")
             try await GitService.shared.setRemoteURL(captured.repo.remoteURL, at: checkoutPath)
 
-            let target = captured.branch.isEmpty ? captured.repo.defaultBranch : captured.branch
-
             if captured.createNewBranch {
-                op.setStatus("Creating branch \(target)…")
+                updateStatus("Creating branch \(target)…")
                 try await GitService.shared.createBranch(target, at: checkoutPath)
             } else {
                 do {
-                    op.setStatus("Checking out \(target)…")
+                    updateStatus("Checking out \(target)…")
                     try await GitService.shared.checkout(branch: target, at: checkoutPath)
                 } catch {
-                    op.setStatus("Branch not local — fetching \(target) from origin…")
+                    updateStatus("Branch not local — fetching \(target) from origin…")
                     for try await line in GitService.shared.fetchBranchStreaming(target, at: checkoutPath) {
                         op.append(line)
                     }
-                    op.setStatus("Checking out \(target)…")
+                    updateStatus("Checking out \(target)…")
                     try await GitService.shared.checkout(branch: target, at: checkoutPath)
                 }
             }
 
-            let nextOrder = (captured.repo.checkouts.map(\.order).max() ?? -1) + 1
-            let checkout = Checkout(
-                name: sluggedName,
-                displayName: captured.name,
-                path: checkoutPath.path,
-                branch: target,
-                order: nextOrder
-            )
-            checkout.repository = captured.repo
-            context.insert(checkout)
-            try context.save()
-            insertedCheckout = checkout
             op.append("[muster] checkout ready — installing deps in background")
 
             if let pm = captured.repo.packageManager {
-                op.setStatus("Installing dependencies (\(pm.rawValue), offline)…")
+                updateStatus("Installing dependencies (\(pm.rawValue), offline)…")
                 checkout.depsState = .installing
                 op.append("[muster] running \(pm.offlineInstallCommand.joined(separator: " "))")
                 do {
@@ -180,17 +182,19 @@ struct NewCheckoutView: View {
                     checkout.depsState = .current
                 } catch {
                     checkout.depsState = .error(error.localizedDescription)
+                    checkout.setupStatus = nil
                     op.fail("Dependency install failed: \(error.localizedDescription)")
                     return
                 }
             }
 
+            checkout.setupStatus = nil
             op.succeed()
         } catch {
-            if weCreatedDir, insertedCheckout == nil {
-                try? fm.removeItem(at: checkoutPath)
-                op.append("[muster] cleaned up partial checkout at \(checkoutPath.path)")
-            }
+            context.delete(checkout)
+            try? context.save()
+            try? fm.removeItem(at: checkoutPath)
+            op.append("[muster] cleaned up partial checkout at \(checkoutPath.path)")
             op.fail(error.localizedDescription)
         }
     }

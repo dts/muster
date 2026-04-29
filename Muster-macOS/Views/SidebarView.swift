@@ -17,8 +17,8 @@ struct SidebarView: View {
     @State private var store = OperationStore.shared
     @State private var expandedRepos: Set<UUID> = []
     @State private var repoForNewCheckout: Repository?
-    @State private var checkoutToDelete: Checkout?
-    @State private var repoToDelete: Repository?
+    @State private var dirtyCheckoutToDelete: Checkout?
+    @State private var dirtyRepoToDelete: Repository?
     @State private var checkoutToRename: Checkout?
     @State private var renameText: String = ""
     @State private var dropTargetId: UUID?
@@ -106,7 +106,7 @@ struct SidebarView: View {
                                 }
                                 Divider()
                                 Button(role: .destructive) {
-                                    checkoutToDelete = checkout
+                                    requestDeleteCheckout(checkout)
                                 } label: {
                                     Label("Delete Checkout…", systemImage: "trash")
                                 }
@@ -130,7 +130,7 @@ struct SidebarView: View {
                                 }
                                 Divider()
                                 Button(role: .destructive) {
-                                    repoToDelete = repo
+                                    requestDeleteRepository(repo)
                                 } label: {
                                     Label("Delete Repository…", systemImage: "trash")
                                 }
@@ -143,38 +143,34 @@ struct SidebarView: View {
             NewCheckoutView(repository: repo)
         }
         .alert(
-            "Delete checkout \"\(checkoutToDelete?.resolvedDisplayName ?? "")\"?",
+            "Delete checkout \"\(dirtyCheckoutToDelete?.resolvedDisplayName ?? "")\"?",
             isPresented: Binding(
-                get: { checkoutToDelete != nil },
-                set: { if !$0 { checkoutToDelete = nil } }
+                get: { dirtyCheckoutToDelete != nil },
+                set: { if !$0 { dirtyCheckoutToDelete = nil } }
             ),
-            presenting: checkoutToDelete
+            presenting: dirtyCheckoutToDelete
         ) { checkout in
             Button("Delete", role: .destructive) {
-                delete(checkout: checkout)
+                performDeleteCheckout(checkout)
             }
             Button("Cancel", role: .cancel) {}
-        } message: { checkout in
-            Text("This removes the directory at \(checkout.path). Any uncommitted changes will be lost.")
+        } message: { _ in
+            Text("This checkout has uncommitted changes that will be lost.")
         }
         .alert(
-            "Delete repository \"\(repoToDelete?.displayName ?? "")\"?",
+            "Delete repository \"\(dirtyRepoToDelete?.displayName ?? "")\"?",
             isPresented: Binding(
-                get: { repoToDelete != nil },
-                set: { if !$0 { repoToDelete = nil } }
+                get: { dirtyRepoToDelete != nil },
+                set: { if !$0 { dirtyRepoToDelete = nil } }
             ),
-            presenting: repoToDelete
+            presenting: dirtyRepoToDelete
         ) { repo in
             Button("Delete Everything", role: .destructive) {
-                delete(repository: repo)
+                performDeleteRepository(repo)
             }
             Button("Cancel", role: .cancel) {}
-        } message: { repo in
-            let n = repo.checkouts.count
-            let checkoutBit = n == 0
-                ? "(no checkouts)"
-                : "and \(n) checkout\(n == 1 ? "" : "s") under ~/muster/\(repo.displayName)"
-            Text("This removes the master copy at \(repo.masterPath) \(checkoutBit). This cannot be undone.")
+        } message: { _ in
+            Text("One or more checkouts have uncommitted changes that will be lost.")
         }
         .alert(
             "Rename Checkout",
@@ -222,25 +218,81 @@ struct SidebarView: View {
         store.dismiss(op)
     }
 
-    private func delete(checkout: Checkout) {
+    private func requestDeleteCheckout(_ checkout: Checkout) {
+        Task {
+            let isDirty = (try? await GitService.shared.hasUncommittedChanges(
+                at: URL(fileURLWithPath: checkout.path)
+            )) ?? false
+            if isDirty {
+                dirtyCheckoutToDelete = checkout
+            } else {
+                performDeleteCheckout(checkout)
+            }
+        }
+    }
+
+    private func requestDeleteRepository(_ repo: Repository) {
+        Task {
+            var hasDirty = false
+            for checkout in repo.checkouts {
+                if (try? await GitService.shared.hasUncommittedChanges(
+                    at: URL(fileURLWithPath: checkout.path)
+                )) == true {
+                    hasDirty = true
+                    break
+                }
+            }
+            if hasDirty {
+                dirtyRepoToDelete = repo
+            } else {
+                performDeleteRepository(repo)
+            }
+        }
+    }
+
+    private func performDeleteCheckout(_ checkout: Checkout) {
         if case .checkout(let sel) = selection, sel == checkout {
             selection = nil
         }
-        try? FileManager.default.removeItem(at: URL(fileURLWithPath: checkout.path))
+        let path = checkout.path
+        let name = checkout.resolvedDisplayName
         modelContext.delete(checkout)
         try? modelContext.save()
+
+        let op = Operation(title: "Deleting checkout", subtitle: name)
+        store.add(op)
+        Task.detached {
+            do {
+                try FileManager.default.removeItem(at: URL(fileURLWithPath: path))
+                await MainActor.run { op.succeed() }
+            } catch {
+                await MainActor.run { op.fail(error.localizedDescription) }
+            }
+        }
     }
 
-    private func delete(repository: Repository) {
-        if case .checkout(let sel) = selection, sel.repository?.id == repository.id {
+    private func performDeleteRepository(_ repo: Repository) {
+        if case .checkout(let sel) = selection, sel.repository?.id == repo.id {
             selection = nil
         }
-        try? FileManager.default.removeItem(at: URL(fileURLWithPath: repository.masterPath))
-        let checkoutsRoot = PathService.shared.checkoutsDir
-            .appendingPathComponent(repository.displayName, isDirectory: true)
-        try? FileManager.default.removeItem(at: checkoutsRoot)
-        modelContext.delete(repository)
+        let masterPath = repo.masterPath
+        let displayName = repo.displayName
+        modelContext.delete(repo)
         try? modelContext.save()
+
+        let op = Operation(title: "Deleting repository", subtitle: displayName)
+        store.add(op)
+        Task.detached {
+            do {
+                try FileManager.default.removeItem(at: URL(fileURLWithPath: masterPath))
+                let checkoutsRoot = PathService.shared.checkoutsDir
+                    .appendingPathComponent(displayName, isDirectory: true)
+                try? FileManager.default.removeItem(at: checkoutsRoot)
+                await MainActor.run { op.succeed() }
+            } catch {
+                await MainActor.run { op.fail(error.localizedDescription) }
+            }
+        }
     }
 
     private func sortedCheckouts(for repo: Repository) -> [Checkout] {
@@ -366,4 +418,3 @@ struct InsertionMarker: View {
         .padding(.vertical, 2)
     }
 }
-
