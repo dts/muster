@@ -30,21 +30,54 @@ struct ContentView: View {
                 OperationDetailView(operation: op, selection: $selection)
                     .id(op.id)
             case .none:
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     Image("Sheep")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 240, height: 240)
+                        .frame(width: 200, height: 200)
                         .clipShape(RoundedRectangle(cornerRadius: 32))
                         .overlay(
                             RoundedRectangle(cornerRadius: 32)
                                 .stroke(Color.secondary.opacity(0.3), lineWidth: 2)
                         )
-                    Text("No Checkout Selected")
-                        .font(.title2)
-                        .fontWeight(.medium)
-                    Text("Select a checkout from the sidebar to open a terminal.")
+
+                    if repositories.isEmpty {
+                        Text("Welcome to Muster")
+                            .font(.title2)
+                            .fontWeight(.medium)
+                        Text("Add a repository to get started")
+                            .foregroundStyle(.secondary)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Press **\u{2318}N** or click **+** to add a repository", systemImage: "1.circle.fill")
+                            Label("Paste an SSH URL like `git@github.com:user/repo.git`", systemImage: "2.circle.fill")
+                            Label("Create checkouts for each branch or feature you're working on", systemImage: "3.circle.fill")
+                        }
+                        .font(.callout)
                         .foregroundStyle(.secondary)
+                        .padding(.top, 8)
+                    } else if allCheckouts.isEmpty {
+                        Text("No Checkouts Yet")
+                            .font(.title2)
+                            .fontWeight(.medium)
+                        Text("Create a checkout to start working")
+                            .foregroundStyle(.secondary)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Right-click a repository and choose **New Checkout**", systemImage: "1.circle.fill")
+                            Label("Give it a name and pick a branch", systemImage: "2.circle.fill")
+                            Label("Each checkout gets its own terminal and isolated workspace", systemImage: "3.circle.fill")
+                        }
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 8)
+                    } else {
+                        Text("Select a Checkout")
+                            .font(.title2)
+                            .fontWeight(.medium)
+                        Text("Click a checkout in the sidebar to open its terminal")
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

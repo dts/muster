@@ -1,27 +1,49 @@
 # Muster
 
-A native macOS app for managing git repositories with automatic sync, dependency management, and embedded terminal.
+<p align="center">
+  <img src="Muster-macOS/Assets.xcassets/AppIcon.appiconset/icon_256.png" alt="Muster" width="128" height="128">
+</p>
+
+A native macOS app for managing git repositories. Muster keeps a synced master copy of each repo and lets you spin up isolated checkouts instantly — no waiting for clones, no fighting over branches.
+
+## Why Muster?
+
+Working on multiple features or reviews at once means juggling branches, stashing changes, or maintaining multiple clones. Muster solves this by separating the "source of truth" from your working directories:
+
+- **Master copies** live in `~/.muster/repos/` and stay synced with remote
+- **Checkouts** are instant local clones in `~/muster/<repo>/<name>/` — each with its own branch and terminal
+- **Dependencies** install from cache (offline `pnpm i`), so new checkouts are ready in seconds
 
 ## Features
 
-- **Repository Management**: Clone and track repositories from GitHub/GitLab via SSH
-- **Auto-sync**: Master copies stay up-to-date with remote
-- **Named Checkouts**: Create isolated workspaces with user-defined names
-- **Offline Deps**: Checkouts install dependencies from cache (`pnpm i --frozen-lockfile --offline`)
-- **Embedded Terminal**: Ghostty-powered terminal view (libghostty)
+- **Add repositories** via SSH URL — cloning runs in the background
+- **Create named checkouts** on any branch (existing or new)
+- **Embedded terminal** per checkout with status indicators (idle/busy)
+- **Auto-sync** keeps master copies up to date
+- **Offline deps** — checkouts install from the master's cached `node_modules`
+- **Drag to reorder** checkouts in the sidebar
+- **Branch monitoring** — sidebar reflects current branch in real-time
+
+## Quick Start
+
+1. **Add a repository**: Click `+` or press `⌘N`, paste the SSH URL
+2. **Create a checkout**: Right-click the repo → New Checkout, give it a name and branch
+3. **Start working**: Click the checkout to open its terminal
+
+Each checkout is fully isolated — switch between features, reviews, or experiments without touching your other work.
 
 ## Directory Structure
 
 ```
-~/.muster/                    # Hidden - internal data
+~/.muster/                    # Hidden — internal data
 ├── repos/                    # Master copies (auto-synced)
 └── config.json
 
-~/muster/                     # Visible - user workspaces
-└── <repo>/<checkout>/        # Your working directories
+~/muster/                     # Visible — your workspaces
+└── <repo>/<checkout>/        # Working directories
 ```
 
-## Setup
+## Building
 
 ### Prerequisites
 
@@ -29,29 +51,21 @@ A native macOS app for managing git repositories with automatic sync, dependency
 - macOS 14.0+ (Sonoma)
 - SSH keys configured for GitHub/GitLab
 
-### Building
-
-1. Open Xcode and create a new macOS App project named "Muster"
-2. Add the MusterCore package as a local dependency
-3. Copy the `Muster-macOS/` files into the app target
-4. Build and run
-
-### Option A: Using `xcodegen` (recommended)
+### Option A: Using xcodegen (recommended)
 
 ```bash
 brew install xcodegen
-cd /path/to/muster
+cd /path/to/muster/the-core
 xcodegen generate
 open Muster.xcodeproj
 ```
 
 ### Option B: Manual Xcode Setup
 
-1. Open Xcode → File → New → Project
-2. Choose "macOS App" template, name it "Muster"
-3. File → Add Package Dependencies → Add Local → select this directory
-4. Drag `Muster-macOS/*.swift` files into your project
-5. In target settings:
+1. Open Xcode → File → New → Project → macOS App, name it "Muster"
+2. File → Add Package Dependencies → Add Local → select this directory
+3. Drag `Muster-macOS/*.swift` files into your project
+4. In target settings:
    - Add MusterCore to "Frameworks and Libraries"
    - Set deployment target to macOS 14.0
    - Disable App Sandbox in Signing & Capabilities
@@ -65,12 +79,25 @@ MusterCore (Swift Package)     # Shared business logic
 
 Muster-macOS (App Target)      # macOS UI
 ├── Views/                     # SwiftUI views
-└── Bridging/                  # libghostty C bridge (TODO)
+└── Operations/                # Background operation tracking
 ```
 
-## TODO
+## Terminal Status Integration
 
-- [ ] Phase 2: libghostty terminal integration
-- [ ] Phase 4: Background sync engine with FSEvents
-- [ ] Menu bar status item
-- [ ] Keyboard shortcuts
+Muster uses OSC 99 escape codes to show terminal state in the sidebar. The indicator colors are:
+
+- **Green** — idle, ready for input
+- **Orange** — busy running a command
+- **Red** — waiting for permission (e.g., a tool approval prompt)
+
+To enable basic idle/busy indicators, add to your `.zshrc`:
+
+```zsh
+muster_preexec() { printf '\e]99;muster;state=busy\a' }
+muster_precmd() { printf '\e]99;muster;state=idle\a' }
+autoload -Uz add-zsh-hook
+add-zsh-hook preexec muster_preexec
+add-zsh-hook precmd muster_precmd
+```
+
+Tools that prompt for permission can send `state=permission` to show the red indicator.

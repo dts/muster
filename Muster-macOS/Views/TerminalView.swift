@@ -10,33 +10,18 @@ final class MusterTerminalView: LocalProcessTerminalView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        NSLog("[muster] MusterTerminalView init")
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        NSLog("[muster] MusterTerminalView init from coder")
     }
 
     override func dataReceived(slice: ArraySlice<UInt8>) {
-        if slice.count > 0 && slice.count < 200 {
-            NSLog("[muster] dataReceived: \(slice.count) bytes")
-        }
         scanForOSC99(slice)
         super.dataReceived(slice: slice)
     }
 
     private func scanForOSC99(_ data: ArraySlice<UInt8>) {
-        // Look for ESC ] 99 ; pattern in the raw data
-        let dataArray = Array(data)
-        if let escIdx = dataArray.firstIndex(of: 0x1B) {
-            let remaining = dataArray[escIdx...]
-            if remaining.count >= 5 {
-                let prefix = Array(remaining.prefix(5))
-                NSLog("[muster] Found ESC at \(escIdx), next 5 bytes: \(prefix.map { String(format: "%02X", $0) }.joined(separator: " "))")
-            }
-        }
-
         for byte in data {
             if inOSC99 {
                 if byte == 0x07 || byte == 0x9C { // BEL or ST
@@ -71,8 +56,6 @@ final class MusterTerminalView: LocalProcessTerminalView {
 
     private func processOSC99() {
         let payload = ArraySlice(oscBuffer)
-        let payloadStr = String(bytes: payload, encoding: .utf8) ?? "(binary)"
-        NSLog("[muster] OSC 99 received: \(payloadStr) for \(workingDirectory)")
         Task { @MainActor in
             TerminalStatusStore.shared.parseOSC99(payload, for: workingDirectory)
         }
@@ -110,11 +93,9 @@ final class TerminalCache {
 
     func view(for checkout: Checkout) -> MusterTerminalView {
         if let existing = views[checkout.path] {
-            NSLog("[muster] Returning cached terminal for \(checkout.path)")
             return existing
         }
 
-        NSLog("[muster] Creating new MusterTerminalView for \(checkout.path)")
         let terminalView = MusterTerminalView(frame: .zero)
         terminalView.workingDirectory = checkout.path
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
@@ -191,7 +172,6 @@ struct TerminalView: NSViewRepresentable {
         func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
 
         func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
-            NSLog("[muster] Terminal title changed: '\(title)' for \(workingDirectory)")
             Task { @MainActor in
                 TerminalStatusStore.shared.setTitle(title.isEmpty ? nil : title, for: workingDirectory)
             }

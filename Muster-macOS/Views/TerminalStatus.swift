@@ -4,6 +4,7 @@ import Combine
 public enum TerminalState: Equatable {
     case idle
     case busy(message: String?)
+    case permission(message: String?)
     case unknown
 }
 
@@ -44,17 +45,11 @@ public final class TerminalStatusStore {
     }
 
     func parseOSC99(_ data: ArraySlice<UInt8>, for workingDirectory: String) {
-        guard let str = String(bytes: data, encoding: .utf8) else {
-            NSLog("[muster] OSC 99 parse failed: not valid UTF-8")
-            return
-        }
+        guard let str = String(bytes: data, encoding: .utf8) else { return }
 
         // Format: muster;state=idle|busy[;msg=...]
         let parts = str.split(separator: ";", omittingEmptySubsequences: false)
-        guard parts.first == "muster" else {
-            NSLog("[muster] OSC 99 ignored: not muster prefix, got '\(parts.first ?? "")'")
-            return
-        }
+        guard parts.first == "muster" else { return }
 
         var state: TerminalState = .unknown
         var message: String?
@@ -72,8 +67,10 @@ public final class TerminalStatusStore {
                     state = .idle
                 case "busy":
                     state = .busy(message: nil)
+                case "permission":
+                    state = .permission(message: nil)
                 default:
-                    NSLog("[muster] OSC 99 unknown state: \(value)")
+                    break
                 }
             case "msg":
                 message = value
@@ -85,8 +82,10 @@ public final class TerminalStatusStore {
         if case .busy = state, let msg = message {
             state = .busy(message: msg)
         }
+        if case .permission = state, let msg = message {
+            state = .permission(message: msg)
+        }
 
-        NSLog("[muster] Setting state to \(state) for \(workingDirectory)")
         setState(state, for: workingDirectory)
     }
 }
@@ -105,6 +104,11 @@ struct TerminalStateIndicator: View {
                 .fill(.orange)
                 .frame(width: 8, height: 8)
                 .help(message ?? "Working")
+        case .permission(let message):
+            Circle()
+                .fill(.red)
+                .frame(width: 8, height: 8)
+                .help(message ?? "Waiting for permission")
         case .unknown:
             EmptyView()
         }
