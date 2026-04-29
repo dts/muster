@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1202D69BB94C12266A87D28B /* MusterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92B603A68BAA4906CECA8A02 /* MusterApp.swift */; };
+		213799CAB199113489CA7C1A /* TerminalStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86CB21460CA883377D7EC686 /* TerminalStatus.swift */; };
 		21D4719E020AF473A7A1E3A1 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 19B880ED17F5581E213791C4 /* SwiftTerm */; };
 		31255D58923DD4B0894DF6B4 /* MusterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 815A1DDE71C4D72990423C16 /* MusterCore */; };
 		3C1DCBD713E2E36D504F4979 /* MusterCore in Frameworks */ = {isa = PBXBuildFile; productRef = F1480049C23C91DC6A0932FB /* MusterCore */; };
@@ -27,13 +28,14 @@
 /* Begin PBXFileReference section */
 		071E13536AFE944006C4A377 /* Muster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Muster.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		082EDFD7E85D54CDB103DBDA /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
+		20D6A216CA7928893B045EBE /* escape-code-status-notifications-etc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "escape-code-status-notifications-etc"; path = .; sourceTree = SOURCE_ROOT; };
 		341F3ACE996C2DF82EC2816D /* NewCheckoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewCheckoutView.swift; sourceTree = "<group>"; };
 		547120FEB9BD0BACDB8DAED7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5802F588980376C6FA9C720A /* MusterCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MusterCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		697AED67A2160E882537B25B /* Muster.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Muster.entitlements; sourceTree = "<group>"; };
+		86CB21460CA883377D7EC686 /* TerminalStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalStatus.swift; sourceTree = "<group>"; };
 		90A17EE5A352B3F9289920BC /* OperationsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsPanel.swift; sourceTree = "<group>"; };
 		92B603A68BAA4906CECA8A02 /* MusterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusterApp.swift; sourceTree = "<group>"; };
-		93C0D596CE9455E741974E52 /* header-style */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "header-style"; path = .; sourceTree = SOURCE_ROOT; };
 		B83819C1F53090DD052A04A8 /* AddRepositoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddRepositoryView.swift; sourceTree = "<group>"; };
 		BFB41038DDB95DE876D14511 /* TerminalContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalContainerView.swift; sourceTree = "<group>"; };
 		C849588E3D9D2B930D66AF27 /* StreamingOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingOutputView.swift; sourceTree = "<group>"; };
@@ -79,7 +81,7 @@
 		6CD9BCE8CA479397BE5E2E62 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				93C0D596CE9455E741974E52 /* header-style */,
+				20D6A216CA7928893B045EBE /* escape-code-status-notifications-etc */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -94,6 +96,7 @@
 				D2AD48580499FFA14461771C /* SidebarView.swift */,
 				C849588E3D9D2B930D66AF27 /* StreamingOutputView.swift */,
 				BFB41038DDB95DE876D14511 /* TerminalContainerView.swift */,
+				86CB21460CA883377D7EC686 /* TerminalStatus.swift */,
 				082EDFD7E85D54CDB103DBDA /* TerminalView.swift */,
 			);
 			path = Views;
@@ -249,6 +252,7 @@
 				9C802525415B1B0EE5B89F38 /* SidebarView.swift in Sources */,
 				E2A0B26B906138AE99566424 /* StreamingOutputView.swift in Sources */,
 				A58CECC8DB08EB98911F1075 /* TerminalContainerView.swift in Sources */,
+				213799CAB199113489CA7C1A /* TerminalStatus.swift in Sources */,
 				AAE6D7217B2E01510692738D /* TerminalView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

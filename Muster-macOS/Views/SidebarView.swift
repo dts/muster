@@ -75,8 +75,11 @@ struct SidebarView: View {
                                 if dropTargetId == checkout.id && draggingCheckoutId != nil && draggingCheckoutId != checkout.id {
                                     InsertionMarker()
                                 }
-                                CheckoutRow(checkout: checkout)
-                                    .opacity(checkout.id == draggingCheckoutId ? 0.3 : 1.0)
+                                CheckoutRow(
+                                    checkout: checkout,
+                                    isSelected: selection == .checkout(checkout)
+                                )
+                                .opacity(checkout.id == draggingCheckoutId ? 0.3 : 1.0)
                             }
                             .tag(SidebarSelection.checkout(checkout))
                             .draggable(checkout.id.uuidString) {
@@ -341,6 +344,13 @@ struct RepositoryRow: View {
 
 struct CheckoutRow: View {
     let checkout: Checkout
+    var isSelected: Bool = false
+
+    private var statusStore: TerminalStatusStore { TerminalStatusStore.shared }
+
+    private var terminalTitle: String? {
+        statusStore.title(for: checkout.path)
+    }
 
     var body: some View {
         HStack {
@@ -348,12 +358,23 @@ struct CheckoutRow: View {
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(checkout.resolvedDisplayName)
-                Text(checkout.branch)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(checkout.branch)
+                    if let title = terminalTitle {
+                        Text("—")
+                        Text(title)
+                            .lineLimit(1)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Spacer()
+
+            if !isSelected {
+                TerminalStateIndicator(state: statusStore.state(for: checkout.path))
+            }
 
             DepsStateIndicator(state: checkout.depsState)
         }
