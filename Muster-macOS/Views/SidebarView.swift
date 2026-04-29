@@ -202,7 +202,6 @@ struct RepositoryRow: View {
 
 struct CheckoutRow: View {
     let checkout: Checkout
-    @State private var attention = AttentionStore.shared
 
     var body: some View {
         HStack {
@@ -217,7 +216,7 @@ struct CheckoutRow: View {
 
             Spacer()
 
-            if attention.hasUnread(for: checkout.id) {
+            if AttentionStore.shared.hasUnread(for: checkout.id) {
                 Circle()
                     .fill(.orange)
                     .frame(width: 7, height: 7)

@@ -152,7 +152,7 @@ final class RemoteTerminalView: SwiftTerm.TerminalView, TerminalViewDelegate {
     init(checkoutId: UUID, cwd: String) {
         self.checkoutId = checkoutId
         self.cwd = cwd
-        super.init(frame: .zero)
+        super.init(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
         self.terminalDelegate = self
         Task { [weak self] in
             await self?.connect()
@@ -166,11 +166,13 @@ final class RemoteTerminalView: SwiftTerm.TerminalView, TerminalViewDelegate {
         let term = getTerminal()
         let cols = UInt16(max(term.cols, 80))
         let rows = UInt16(max(term.rows, 24))
+        var env = ProcessInfo.processInfo.environment
+        env["TERM"] = "xterm-256color"
         do {
             let s = try await ShellHostClient.shared.attach(
                 checkoutId: checkoutId,
                 cwd: cwd,
-                env: ProcessInfo.processInfo.environment,
+                env: env,
                 cols: cols,
                 rows: rows
             )
@@ -221,6 +223,7 @@ final class RemoteTerminalView: SwiftTerm.TerminalView, TerminalViewDelegate {
         let rows = UInt16(newRows)
         Task { @MainActor [weak self] in
             self?.session?.resize(cols: cols, rows: rows)
+            self?.needsDisplay = true
         }
     }
 
@@ -280,7 +283,9 @@ struct TerminalView: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ nsView: RemoteTerminalView, context: Context) {}
+    func updateNSView(_ nsView: RemoteTerminalView, context: Context) {
+        nsView.needsLayout = true
+    }
 }
 
 extension String {
