@@ -16,6 +16,16 @@ final class MusterTerminalView: LocalProcessTerminalView {
         super.init(coder: coder)
     }
 
+    func configureScrollback() {
+        let terminal = getTerminal()
+        terminal.options = TerminalOptions(
+            cols: terminal.cols,
+            rows: terminal.rows,
+            scrollback: 10000
+        )
+        terminal.setup(isReset: false)
+    }
+
     override func dataReceived(slice: ArraySlice<UInt8>) {
         scanForOSC99(slice)
         super.dataReceived(slice: slice)
@@ -124,6 +134,7 @@ final class TerminalCache {
             environment: env,
             execName: "-" + (shell as NSString).lastPathComponent
         )
+        terminalView.configureScrollback()
 
         if !checkout.path.isEmpty {
             terminalView.send(txt: "cd \(checkout.path.shellEscaped) && clear\n")
