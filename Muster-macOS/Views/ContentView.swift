@@ -121,9 +121,13 @@ struct ContentView: View {
         }
         .onAppear {
             setupBranchMonitoring()
+            SyncService.shared.start(context: modelContext, repositories: repositories)
         }
         .onChange(of: allCheckouts.map(\.path)) { _, newPaths in
             updateBranchMonitoring(for: newPaths)
+        }
+        .onChange(of: repositories.map(\.id)) { _, _ in
+            SyncService.shared.sync(repositories: repositories)
         }
     }
 }

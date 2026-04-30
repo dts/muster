@@ -139,6 +139,9 @@ struct NewCheckoutView: View {
                 try fm.removeItem(at: checkoutPath)
             }
 
+            updateStatus("Refreshing master from origin…")
+            await SyncService.shared.fetchRepo(captured.repo)
+
             updateStatus("Cloning from master…")
             for try await line in GitService.shared.cloneLocalStreaming(from: masterPath, to: checkoutPath) {
                 op.append(line)
