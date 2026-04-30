@@ -32,6 +32,10 @@ struct MusterApp: App {
                 .keyboardShortcut("n", modifiers: [.command, .shift])
             }
         }
+
+        Settings {
+            SettingsView()
+        }
     }
 }
 

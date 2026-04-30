@@ -9,7 +9,6 @@ struct TerminalContainerView: View {
 
     var body: some View {
         TerminalView(workingDirectory: checkout.path)
-            .id(checkout.path)
             .toolbar {
                 ToolbarItem(placement: .navigation) {
                     HStack(spacing: 6) {

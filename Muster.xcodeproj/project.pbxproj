@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00E72EC85B8992D14B1AD9C8 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C65049E85F608B211C33071 /* AppSettings.swift */; };
+		0CFB52FAC411E30F9C1988B1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A83BAEBDF351321D5A00A8B /* SettingsView.swift */; };
 		1202D69BB94C12266A87D28B /* MusterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92B603A68BAA4906CECA8A02 /* MusterApp.swift */; };
 		21D4719E020AF473A7A1E3A1 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 19B880ED17F5581E213791C4 /* SwiftTerm */; };
 		31255D58923DD4B0894DF6B4 /* MusterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 815A1DDE71C4D72990423C16 /* MusterCore */; };
@@ -28,10 +30,11 @@
 		071E13536AFE944006C4A377 /* Muster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Muster.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		082EDFD7E85D54CDB103DBDA /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
 		341F3ACE996C2DF82EC2816D /* NewCheckoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewCheckoutView.swift; sourceTree = "<group>"; };
-		42B57827B7DEFB5CA9C019FA /* muster */ = {isa = PBXFileReference; lastKnownFileType = folder; name = muster; path = .; sourceTree = SOURCE_ROOT; };
 		547120FEB9BD0BACDB8DAED7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5802F588980376C6FA9C720A /* MusterCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MusterCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		697AED67A2160E882537B25B /* Muster.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Muster.entitlements; sourceTree = "<group>"; };
+		6C65049E85F608B211C33071 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		8A83BAEBDF351321D5A00A8B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		90A17EE5A352B3F9289920BC /* OperationsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsPanel.swift; sourceTree = "<group>"; };
 		92B603A68BAA4906CECA8A02 /* MusterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusterApp.swift; sourceTree = "<group>"; };
 		B83819C1F53090DD052A04A8 /* AddRepositoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddRepositoryView.swift; sourceTree = "<group>"; };
@@ -41,6 +44,7 @@
 		D2AD48580499FFA14461771C /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		D9F32447C7BC101F4E91617C /* Operation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Operation.swift; sourceTree = "<group>"; };
 		E704BE60C1CAEA1A8A2086F1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F78310EFFF1223B43937CDBC /* tmux-for-persistence */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "tmux-for-persistence"; path = .; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,15 +75,24 @@
 				697AED67A2160E882537B25B /* Muster.entitlements */,
 				92B603A68BAA4906CECA8A02 /* MusterApp.swift */,
 				9BEB63FCECD824AA4049EDDD /* Operations */,
+				421873F87D2808BE6FC07FD4 /* Settings */,
 				7DC0DD610590F1A2E2B261E6 /* Views */,
 			);
 			path = "Muster-macOS";
 			sourceTree = "<group>";
 		};
+		421873F87D2808BE6FC07FD4 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				6C65049E85F608B211C33071 /* AppSettings.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
 		6CD9BCE8CA479397BE5E2E62 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				42B57827B7DEFB5CA9C019FA /* muster */,
+				F78310EFFF1223B43937CDBC /* tmux-for-persistence */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -91,6 +104,7 @@
 				E704BE60C1CAEA1A8A2086F1 /* ContentView.swift */,
 				341F3ACE996C2DF82EC2816D /* NewCheckoutView.swift */,
 				90A17EE5A352B3F9289920BC /* OperationsPanel.swift */,
+				8A83BAEBDF351321D5A00A8B /* SettingsView.swift */,
 				D2AD48580499FFA14461771C /* SidebarView.swift */,
 				C849588E3D9D2B930D66AF27 /* StreamingOutputView.swift */,
 				BFB41038DDB95DE876D14511 /* TerminalContainerView.swift */,
@@ -241,11 +255,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				BDBA7AAF924A915209C3941B /* AddRepositoryView.swift in Sources */,
+				00E72EC85B8992D14B1AD9C8 /* AppSettings.swift in Sources */,
 				E470AE79D163F985A2FEB461 /* ContentView.swift in Sources */,
 				1202D69BB94C12266A87D28B /* MusterApp.swift in Sources */,
 				A744140766ACAE8D3931A06D /* NewCheckoutView.swift in Sources */,
 				DE64A695EE966FB2EF417B33 /* Operation.swift in Sources */,
 				99C11A99C0D728990CCFA430 /* OperationsPanel.swift in Sources */,
+				0CFB52FAC411E30F9C1988B1 /* SettingsView.swift in Sources */,
 				9C802525415B1B0EE5B89F38 /* SidebarView.swift in Sources */,
 				E2A0B26B906138AE99566424 /* StreamingOutputView.swift in Sources */,
 				A58CECC8DB08EB98911F1075 /* TerminalContainerView.swift in Sources */,
