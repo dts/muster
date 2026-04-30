@@ -21,7 +21,7 @@ final class MusterTerminalView: LocalProcessTerminalView {
         terminal.options = TerminalOptions(
             cols: terminal.cols,
             rows: terminal.rows,
-            scrollback: 10000
+            scrollback: 100000
         )
         terminal.setup(isReset: false)
     }

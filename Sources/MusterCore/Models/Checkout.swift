@@ -16,7 +16,7 @@ public final class Checkout {
     public var displayName: String?
     public var path: String
     public var branch: String
-    public var createdAt: Date = Date()
+    public var createdAt: Int = 0
     public var order: Int = 0
     @Transient public var depsState: DepsState = .current
     @Transient public var setupStatus: String?
@@ -33,7 +33,7 @@ public final class Checkout {
         displayName: String? = nil,
         path: String,
         branch: String,
-        createdAt: Date = Date(),
+        createdAt: Int = Int(Date().timeIntervalSince1970 * 1000),
         order: Int = 0
     ) {
         self.id = id
